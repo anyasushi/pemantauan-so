@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem SO Pintar</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        label { font-weight: bold; margin-top: 10px; display: block; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button.sync { background-color: #007bff; }
+        .hidden { display: none; }
+        .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Pemantauan SO</h2>
+    
+    <label>Lokaliti:</label>
+    <input type="text" id="lokaliti" placeholder="Contoh: Kg Setia" required>
+
+    <label>Tindakan:</label>
+    <select id="tindakan" onchange="paparStatus()">
+        <option value="">-- Pilih Tindakan --</option>
+        <option value="Pasang">Pasang (R1/Bekas Baharu)</option>
+        <option value="Kutip">Kutip & Ganti</option>
+    </select>
+
+    <div id="ruangStatus" class="hidden">
+        <label>Status Bekas Lama:</label>
+        <select id="status">
+            <option value="N/A">-- Pilih Status --</option>
+            <option value="BAIK">BAIK</option>
+            <option value="MUSNAH">MUSNAH</option>
+            <option value="HILANG">HILANG</option>
+        </select>
+    </div>
+
+    <label>ID Bekas (Imbas QR):</label>
+    <input type="text" id="id_bekas" placeholder="Contoh: BKS-001" required>
+
+    <button onclick="simpanData()">Simpan (Luar Talian)</button>
+    <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
+
+    <div class="status-box">
+        <strong>Status GPS:</strong> <span id="gps_status">Menunggu...</span><br>
+        <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
+    </div>
+</div>
+
+<script>
+    let latSemasa = "";
+    let lngSemasa = "";
+
+    function paparStatus() {
+        var tindakan = document.getElementById("tindakan").value;
+        var ruangStatus = document.getElementById("ruangStatus");
+        if (tindakan === "Kutip") {
+            ruangStatus.classList.remove("hidden");
+        } else {
+            ruangStatus.classList.add("hidden");
+            document.getElementById("status").value = "N/A";
+        }
+    }
+
+    // Fungsi GPS yang telah dikemas kini untuk mengesan ralat
+    function dapatkanGPS() {
+        if (navigator.geolocation) {
+            document.getElementById("gps_status").innerText = "Mencari lokasi...";
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    latSemasa = position.coords.latitude;
+                    lngSemasa = position.coords.longitude;
+                    document.getElementById("gps_status").innerText = "✅ Berjaya didapati";
+                },
+                function(error) {
+                    let mesejRalat = "";
+                    if (error.code === 1) mesejRalat = "❌ Gagal: Browser menghalang GPS (Permission Denied)";
+                    if (error.code === 2) mesejRalat = "❌ Gagal: Tiada isyarat GPS (Position Unavailable)";
+                    if (error.code === 3) mesejRalat = "❌ Gagal: Terlalu lama mencari satelit (Timeout)";
+                    
+                    document.getElementById("gps_status").innerText = mesejRalat;
+                    alert("Ralat GPS: " + mesejRalat + "\n\nSila pastikan Location/GPS dihidupkan pada peranti anda.");
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            document.getElementById("gps_status").innerText = "❌ Browser tidak sokong GPS";
+        }
+    }
+    
+    window.onload = dapatkanGPS;
+
+    function simpanData() {
+        if (!latSemasa || !lngSemasa) {
+            alert("Sila tunggu koordinat GPS didapati terlebih dahulu atau semak ralat GPS.");
+            return;
+        }
+
+        let lokaliti = document.getElementById("lokaliti").value;
+        let tindakan = document.getElementById("tindakan").value;
+        let status = document.getElementById("status").value;
+        let id_bekas = document.getElementById("id_bekas").value;
+        let tarikh = new Date().toLocaleDateString('en-GB');
+        let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+        if (!lokaliti || !tindakan || !id_bekas) {
+            alert("Sila lengkapkan borang.");
+            return;
+        }
+
+        let rekodBaru = { lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa };
+        
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
+        senaraiRekod.push(rekodBaru);
+        localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
+
+        alert("Data disimpan di dalam memori!");
+        kiraRekod();
+    }
+
+    function kiraRekod() {
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
+        document.getElementById("rekod_count").innerText = senaraiRekod.length;
+    }
+    kiraRekod();
+
+    function syncData() {
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
+        if (senaraiRekod.length === 0) {
+            alert("Tiada data baharu untuk di-sync.");
+            return;
+        }
+
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
+
+        document.querySelector(".sync").innerText = "Sedang Sync...";
+
+        senaraiRekod.forEach((rekod, index) => {
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify(rekod),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    senaraiRekod.splice(index, 1);
+                    localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
+                    kiraRekod();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        setTimeout(() => {
+            document.querySelector(".sync").innerText = "Sync ke Server ☁️";
+            alert("Proses sync selesai!");
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
