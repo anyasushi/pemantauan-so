@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem SO Pintar</title>
+    <!-- Pustaka Pengimbas QR -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
         .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -12,8 +14,12 @@
         input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button.sync { background-color: #007bff; }
+        button.kamera { background-color: #17a2b8; margin-top: 0; width: 30%; }
+        button.tutup-kamera { background-color: #dc3545; display: none; }
         .hidden { display: none; }
         .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        #reader { width: 100%; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -41,8 +47,15 @@
         </select>
     </div>
 
-    <label>ID Bekas (Imbas QR):</label>
-    <input type="text" id="id_bekas" placeholder="Contoh: BKS-001" required>
+    <label>ID Bekas:</label>
+    <div class="flex-row">
+        <input type="text" id="id_bekas" placeholder="BKS-001" style="width: 70%;" required>
+        <button type="button" class="kamera" onclick="mulaImbas()">📷 QR</button>
+    </div>
+    
+    <!-- Ruang Kamera Paparan QR -->
+    <div id="reader"></div>
+    <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
     <button onclick="simpanData()">Simpan (Luar Talian)</button>
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
@@ -56,6 +69,7 @@
 <script>
     let latSemasa = "";
     let lngSemasa = "";
+    let html5QrCode;
 
     function paparStatus() {
         var tindakan = document.getElementById("tindakan").value;
@@ -68,7 +82,6 @@
         }
     }
 
-    // Fungsi GPS yang telah dikemas kini untuk mengesan ralat
     function dapatkanGPS() {
         if (navigator.geolocation) {
             document.getElementById("gps_status").innerText = "Mencari lokasi...";
@@ -79,26 +92,50 @@
                     document.getElementById("gps_status").innerText = "✅ Berjaya didapati";
                 },
                 function(error) {
-                    let mesejRalat = "";
-                    if (error.code === 1) mesejRalat = "❌ Gagal: Browser menghalang GPS (Permission Denied)";
-                    if (error.code === 2) mesejRalat = "❌ Gagal: Tiada isyarat GPS (Position Unavailable)";
-                    if (error.code === 3) mesejRalat = "❌ Gagal: Terlalu lama mencari satelit (Timeout)";
-                    
-                    document.getElementById("gps_status").innerText = mesejRalat;
-                    alert("Ralat GPS: " + mesejRalat + "\n\nSila pastikan Location/GPS dihidupkan pada peranti anda.");
+                    document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon";
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                { enableHighAccuracy: true }
             );
-        } else {
-            document.getElementById("gps_status").innerText = "❌ Browser tidak sokong GPS";
         }
     }
-    
     window.onload = dapatkanGPS;
+
+    // --- FUNGSI KAMERA QR ---
+    function mulaImbas() {
+        document.getElementById('reader').style.display = "block";
+        document.getElementById('btnTutupKamera').style.display = "block";
+        
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, // Guna kamera belakang
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText, decodedResult) => {
+                // Jika berjaya baca QR
+                document.getElementById('id_bekas').value = decodedText;
+                hentiImbas();
+                // Getaran telefon jika disokong
+                if (navigator.vibrate) navigator.vibrate(200);
+            },
+            (errorMessage) => {
+                // Abaikan ralat kecil semasa mencari QR
+            }
+        ).catch((err) => {
+            alert("Ralat kamera: " + err);
+        });
+    }
+
+    function hentiImbas() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader').style.display = "none";
+                document.getElementById('btnTutupKamera').style.display = "none";
+            }).catch(err => console.log("Gagal tutup kamera", err));
+        }
+    }
 
     function simpanData() {
         if (!latSemasa || !lngSemasa) {
-            alert("Sila tunggu koordinat GPS didapati terlebih dahulu atau semak ralat GPS.");
+            alert("Sila tunggu koordinat GPS didapati terlebih dahulu.");
             return;
         }
 
@@ -115,12 +152,13 @@
         }
 
         let rekodBaru = { lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa };
-        
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         senaraiRekod.push(rekodBaru);
         localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
 
         alert("Data disimpan di dalam memori!");
+        // Kosongkan ID Bekas untuk imbasan seterusnya
+        document.getElementById("id_bekas").value = ""; 
         kiraRekod();
     }
 
