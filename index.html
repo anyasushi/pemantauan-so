@@ -21,8 +21,10 @@
         .flex-row { display: flex; gap: 10px; align-items: center; }
         #reader { width: 100%; margin-top: 10px; display: none; }
         .ruang-ganti { border-left: 4px solid #ffc107; padding-left: 10px; margin-top: 15px; background: #fffdf5; padding-bottom: 10px; }
-        /* Tambahan CSS: Papar huruf besar terus semasa menaip (Visual Sahaja) */
         input[type="text"], textarea { text-transform: uppercase; }
+        .teks-amaran { color: red; font-size: 0.85em; font-weight: bold; display: none; margin-top: 2px; }
+        .teks-info { color: #007bff; font-size: 0.85em; font-weight: bold; display: block; margin-top: 5px; }
+        .mod-pukal-box { margin-top: 15px; background: #e3f2fd; padding: 10px; border-radius: 5px; border: 1px solid #90caf9; }
     </style>
 </head>
 <body>
@@ -38,6 +40,19 @@
         <option value="DESA AMAN">
     </datalist>
 
+    <label>Jalan / Blok (Pilihan):</label>
+    <input type="text" id="jalan_blok" placeholder="CONTOH: JALAN 1 ATAU BLOK A">
+
+    <label>Jumlah Bekas (Lokaliti Ini):</label>
+    <select id="jumlah_bekas" onchange="urusJumlahBekas()">
+        <option value="">-- PILIH JUMLAH --</option>
+        <option value="150">150</option>
+        <option value="300">300</option>
+        <option value="600">600</option>
+        <option value="CUSTOM">CUSTOM (MASUKKAN JUMLAH)</option>
+    </select>
+    <input type="number" id="jumlah_custom" class="hidden" placeholder="Masukkan jumlah (Contoh: 50)" oninput="janaSenaraiID()">
+
     <label>Tindakan:</label>
     <select id="tindakan" onchange="urusTindakan()">
         <option value="">-- Pilih Tindakan --</option>
@@ -45,11 +60,33 @@
         <option value="Kutip">Kutip & Ganti</option>
     </select>
 
+    <!-- FUNGSI BAHARU: Checkbox Mod Pukal -->
+    <div class="mod-pukal-box">
+        <label style="margin-top:0; cursor:pointer;">
+            <input type="checkbox" id="mod_pukal" onchange="urusPukal()"> ⚡ Mod Pukal (Range di Point Sama)
+        </label>
+    </div>
+
+    <!-- Datalist untuk ID Bekas -->
+    <datalist id="senarai-id-bekas"></datalist>
+
     <label id="label_id_utama">ID Bekas:</label>
     <div class="flex-row">
-        <input type="text" id="id_bekas" placeholder="SO-001" style="width: 65%;" required>
+        <input list="senarai-id-bekas" type="text" id="id_bekas" placeholder="SO-001" style="width: 65%;" oninput="semakID(this, 'amaran_id_utama')" required>
         <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
     </div>
+    <span id="amaran_id_utama" class="teks-amaran">⚠️ ID ini telah diisi!</span>
+
+    <!-- FUNGSI BAHARU: Ruang ID Akhir (Hanya muncul jika Mod Pukal ON) -->
+    <div id="ruang_pukal_akhir" class="hidden">
+        <label style="color:#0056b3;">ID Bekas (AKHIR):</label>
+        <div class="flex-row">
+            <input list="senarai-id-bekas" type="text" id="id_bekas_akhir" placeholder="SO-010" style="width: 65%;">
+            <button type="button" class="kamera" onclick="mulaImbas('id_bekas_akhir')">📷 QR</button>
+        </div>
+    </div>
+
+    <span id="label_last_id" class="teks-info">Rekod Terakhir: Tiada</span>
 
     <div id="ruangKutip" class="hidden ruang-ganti">
         <label>Status Bekas Lama:</label>
@@ -69,11 +106,12 @@
         </div>
 
         <div id="divBekasBaharu" class="hidden">
-            <label style="color: #d32f2f;">ID Bekas BAHARU:</label>
+            <label id="label_id_baharu" style="color: #d32f2f;">ID Bekas BAHARU:</label>
             <div class="flex-row">
-                <input type="text" id="id_bekas_baharu" placeholder="SO-002" style="width: 65%;">
+                <input list="senarai-id-bekas" type="text" id="id_bekas_baharu" placeholder="SO-101" style="width: 65%;" oninput="semakID(this, 'amaran_id_baharu')">
                 <button type="button" class="kamera" onclick="mulaImbas('id_bekas_baharu')">📷 QR</button>
             </div>
+            <span id="amaran_id_baharu" class="teks-amaran">⚠️ ID ini telah diisi!</span>
         </div>
     </div>
     
@@ -97,18 +135,56 @@
     let lngSemasa = "";
     let html5QrCode;
     let sasaranQR = ""; 
+    let sejarahID = JSON.parse(localStorage.getItem("sejarahID")) || []; 
+
+    function urusJumlahBekas() {
+        var val = document.getElementById("jumlah_bekas").value;
+        var customInput = document.getElementById("jumlah_custom");
+        if (val === "CUSTOM") { customInput.classList.remove("hidden"); } 
+        else { customInput.classList.add("hidden"); customInput.value = ""; }
+        janaSenaraiID();
+    }
+
+    function janaSenaraiID() {
+        var val = document.getElementById("jumlah_bekas").value;
+        var limit = (val === "CUSTOM") ? (parseInt(document.getElementById("jumlah_custom").value) || 0) : (parseInt(val) || 0);
+        var datalist = document.getElementById("senarai-id-bekas");
+        datalist.innerHTML = "";
+        for (var i = 1; i <= limit; i++) {
+            var namaID = "SO-" + i.toString().padStart(3, '0');
+            var option = document.createElement("option");
+            option.value = namaID;
+            if (sejarahID.includes(namaID)) option.label = namaID + " [SELESAI]";
+            datalist.appendChild(option);
+        }
+    }
+
+    // FUNGSI BAHARU: Ubah UI jika Mod Pukal ditekan
+    function urusPukal() {
+        let isPukal = document.getElementById("mod_pukal").checked;
+        if (isPukal) {
+            document.getElementById("label_id_utama").innerText = "ID Bekas (MULA):";
+            document.getElementById("ruang_pukal_akhir").classList.remove("hidden");
+            document.getElementById("label_id_baharu").innerText = "ID Bekas BAHARU (MULA):";
+        } else {
+            document.getElementById("label_id_utama").innerText = "ID Bekas:";
+            document.getElementById("ruang_pukal_akhir").classList.add("hidden");
+            document.getElementById("label_id_baharu").innerText = "ID Bekas BAHARU:";
+        }
+    }
+
+    function semakID(elemenInput, idAmaran) {
+        var amaran = document.getElementById(idAmaran);
+        if (sejarahID.includes(elemenInput.value.toUpperCase())) amaran.style.display = "block";
+        else amaran.style.display = "none";
+    }
 
     function urusTindakan() {
         var tindakan = document.getElementById("tindakan").value;
         var ruangKutip = document.getElementById("ruangKutip");
-        var labelId = document.getElementById("label_id_utama");
-
-        if (tindakan === "Kutip") {
-            ruangKutip.classList.remove("hidden");
-            labelId.innerText = "ID Bekas LAMA:";
-        } else {
+        if (tindakan === "Kutip") { ruangKutip.classList.remove("hidden"); } 
+        else {
             ruangKutip.classList.add("hidden");
-            labelId.innerText = "ID Bekas:";
             document.getElementById("status").value = "N/A";
             document.getElementById("ganti_bekas").value = "TIDAK";
             document.getElementById("divGanti").classList.add("hidden");
@@ -117,8 +193,7 @@
     }
 
     function urusStatus() {
-        var status = document.getElementById("status").value;
-        if (status !== "N/A") {
+        if (document.getElementById("status").value !== "N/A") {
             document.getElementById("divGanti").classList.remove("hidden");
             document.getElementById("ganti_bekas").value = "YA"; 
             urusGanti(); 
@@ -129,16 +204,13 @@
         var ganti = document.getElementById("ganti_bekas").value;
         var status = document.getElementById("status").value;
         var divBaharu = document.getElementById("divBekasBaharu");
-
         if (ganti === "YA") {
             divBaharu.classList.remove("hidden");
             if (status === "MUSNAH" || status === "HILANG") {
-                alert("⚠️ AMARAN: Spot ini tidak selamat (Kes Hilang/Musnah). Sila letak bekas baharu di spot lain dan sistem akan menarik koordinat GPS yang baharu.");
+                alert("⚠️ AMARAN: Spot ini tidak selamat. Sila letak bekas baharu di spot lain (Sistem akan tarik GPS baharu).");
                 dapatkanGPS(); 
             }
-        } else {
-            divBaharu.classList.add("hidden");
-        }
+        } else { divBaharu.classList.add("hidden"); }
     }
 
     function dapatkanGPS() {
@@ -150,92 +222,142 @@
                     lngSemasa = position.coords.longitude;
                     document.getElementById("gps_status").innerText = "✅ Berjaya didapati (" + latSemasa.toFixed(5) + ")";
                 },
-                function(error) {
-                    document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon";
-                },
+                function(error) { document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon"; },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
     }
-    window.onload = dapatkanGPS;
+    window.onload = function() { dapatkanGPS(); janaSenaraiID(); };
 
     function mulaImbas(targetInput) {
         sasaranQR = targetInput; 
         document.getElementById('reader').style.display = "block";
         document.getElementById('btnTutupKamera').style.display = "block";
-        
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText, decodedResult) => {
+            { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
                 document.getElementById(sasaranQR).value = decodedText;
+                if(sasaranQR === "id_bekas") semakID(document.getElementById(sasaranQR), "amaran_id_utama");
+                if(sasaranQR === "id_bekas_baharu") semakID(document.getElementById(sasaranQR), "amaran_id_baharu");
                 hentiImbas();
                 if (navigator.vibrate) navigator.vibrate(200);
-            },
-            (errorMessage) => {}
+            }, (err) => {}
         ).catch((err) => alert("Ralat kamera: " + err));
     }
 
     function hentiImbas() {
-        if (html5QrCode) {
-            html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = "none";
-                document.getElementById('btnTutupKamera').style.display = "none";
-            }).catch(err => console.log(err));
-        }
+        if (html5QrCode) html5QrCode.stop().then(() => {
+            document.getElementById('reader').style.display = "none";
+            document.getElementById('btnTutupKamera').style.display = "none";
+        }).catch(err => console.log(err));
+    }
+
+    // FUNGSI BAHARU: Helper untuk pisahkan teks dan nombor (Cth: SO-001 -> SO- dan 1)
+    function ekstrakID(idStr) {
+        let match = idStr.match(/^([^0-9]*)([0-9]+)$/);
+        if (!match) return null;
+        return { prefix: match[1], num: parseInt(match[2]), padLength: match[2].length };
     }
 
     function simpanData() {
-        if (!latSemasa || !lngSemasa) {
-            alert("Sila tunggu koordinat GPS didapati terlebih dahulu.");
-            return;
-        }
+        if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
 
-        // Ambil data asal dari borang
         let tindakan_asal = document.getElementById("tindakan").value;
         let ganti = document.getElementById("ganti_bekas").value;
-        let id_bekas_asal = document.getElementById("id_bekas").value;
         let lokaliti_asal = document.getElementById("lokaliti").value;
+        let id_mula = document.getElementById("id_bekas").value.toUpperCase();
+        let isPukal = document.getElementById("mod_pukal").checked;
 
-        if (!lokaliti_asal || !tindakan_asal || !id_bekas_asal) {
-            alert("Sila lengkapkan borang utama.");
-            return;
+        if (!lokaliti_asal || !tindakan_asal || !id_mula) { alert("Sila lengkapkan borang utama."); return; }
+
+        let senaraiID = [];
+        
+        // Logik Penjanaan Julat ID (Range)
+        if (isPukal) {
+            let id_akhir = document.getElementById("id_bekas_akhir").value.toUpperCase();
+            if(!id_akhir) { alert("Sila masukkan ID Akhir untuk Mod Pukal."); return; }
+            
+            let dataMula = ekstrakID(id_mula);
+            let dataAkhir = ekstrakID(id_akhir);
+
+            if (!dataMula || !dataAkhir || dataMula.prefix !== dataAkhir.prefix || dataMula.num > dataAkhir.num) {
+                alert("Ralat Format Pukal: Pastikan ID Mula & Akhir mempunyai format yang sama (Contoh: SO-001 hingga SO-010)."); return;
+            }
+
+            for (let i = dataMula.num; i <= dataAkhir.num; i++) {
+                senaraiID.push(dataMula.prefix + String(i).padStart(dataMula.padLength, '0'));
+            }
+        } else {
+            senaraiID.push(id_mula);
         }
 
-        // KOD BAHARU: Tukar SEMUA pembolehubah menjadi HURUF BESAR
+        // Semak jika ada ID dalam julat yang sudah dibuat hari ini
+        let idTindih = senaraiID.filter(id => sejarahID.includes(id));
+        if (idTindih.length > 0) {
+            let teruskan = confirm("⚠️ Amaran: Terdapat ID yang telah direkodkan hari ini:\n" + idTindih.join(", ") + "\n\nTeruskan simpan?");
+            if (!teruskan) return;
+        }
+
+        // Kumpul semua data lain
         let lokaliti = lokaliti_asal.toUpperCase();
+        let jalan_blok = document.getElementById("jalan_blok").value.toUpperCase(); 
         let tindakan = tindakan_asal.toUpperCase();
         let status = document.getElementById("status").value.toUpperCase();
-        let id_bekas = id_bekas_asal.toUpperCase();
-        let id_baharu = document.getElementById("id_bekas_baharu").value.toUpperCase();
         let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
-        
         let tarikh = new Date().toLocaleDateString('en-GB');
         let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
-
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
+        
+        let rekodAkhirID = "";
 
-        // Hantar data yang telah di'besarkan' ke memori
-        if (tindakan_asal === "Pasang") {
-            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
-        } 
-        else if (tindakan_asal === "Kutip") {
-            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
-            
-            if (ganti === "YA") {
-                if (!id_baharu) { alert("Sila masukkan ID Bekas Baharu."); return; }
-                senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas: id_baharu, tindakan: "PASANG", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+        // Loop untuk Simpan setiap ID
+        senaraiID.forEach((id_semasa, index) => {
+            if (tindakan_asal === "Pasang") {
+                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+            } 
+            else if (tindakan_asal === "Kutip") {
+                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                
+                if (ganti === "YA") {
+                    let id_baharu_mula = document.getElementById("id_bekas_baharu").value.toUpperCase();
+                    if (!id_baharu_mula) { alert("Sila masukkan ID Bekas Baharu."); return; }
+                    
+                    let id_baharu_semasa = id_baharu_mula; // Default untuk bukan pukal
+                    
+                    if (isPukal) {
+                        let dataB = ekstrakID(id_baharu_mula);
+                        if (!dataB) { alert("Format ID Baharu tidak sah."); return; }
+                        let numKira = dataB.num + index; // Tambah nombor ikut urutan
+                        id_baharu_semasa = dataB.prefix + String(numKira).padStart(dataB.padLength, '0');
+                    }
+
+                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_baharu_semasa, tindakan: "PASANG", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                    if (!sejarahID.includes(id_baharu_semasa)) sejarahID.push(id_baharu_semasa);
+                }
             }
-        }
+            if (!sejarahID.includes(id_semasa)) sejarahID.push(id_semasa);
+            rekodAkhirID = id_semasa; // Simpan ID terakhir untuk paparan
+        });
 
+        localStorage.setItem("sejarahID", JSON.stringify(sejarahID));
         localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
-        alert("Data berjaya disimpan!");
+        alert("Berjaya disimpan! (" + senaraiID.length + " bekas diproses)");
+        
+        // Reset Borang
+        if(isPukal) {
+            document.getElementById("label_last_id").innerText = "Rekod Terakhir (Pukal): " + senaraiID[0] + " - " + rekodAkhirID;
+        } else {
+            document.getElementById("label_last_id").innerText = "Rekod Terakhir: " + rekodAkhirID;
+        }
         
         document.getElementById("id_bekas").value = ""; 
+        document.getElementById("id_bekas_akhir").value = ""; 
         document.getElementById("id_bekas_baharu").value = "";
         document.getElementById("catatan").value = ""; 
+        document.getElementById("amaran_id_utama").style.display = "none";
         if(tindakan_asal === "Kutip") { urusTindakan(); }
+        janaSenaraiID(); 
         kiraRekod();
     }
 
@@ -255,9 +377,7 @@
         let promises = senaraiRekod.map(rekod => 
             fetch(WEB_APP_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                },
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(rekod),
             }).then(response => response.json())
         );
