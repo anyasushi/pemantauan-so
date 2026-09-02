@@ -10,7 +10,8 @@
         .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; }
         label { font-weight: bold; margin-top: 10px; display: block; }
-        input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        textarea { resize: vertical; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button.sync { background-color: #007bff; }
         button.kamera { background-color: #17a2b8; margin-top: 0; width: 35%; }
@@ -20,6 +21,8 @@
         .flex-row { display: flex; gap: 10px; align-items: center; }
         #reader { width: 100%; margin-top: 10px; display: none; }
         .ruang-ganti { border-left: 4px solid #ffc107; padding-left: 10px; margin-top: 15px; background: #fffdf5; padding-bottom: 10px; }
+        /* Tambahan CSS: Papar huruf besar terus semasa menaip (Visual Sahaja) */
+        input[type="text"], textarea { text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -28,11 +31,11 @@
     <h2>Pemantauan SO</h2>
     
     <label>Lokaliti:</label>
-    <input list="senarai-lokaliti" id="lokaliti" placeholder="Pilih atau taip baharu..." required>
+    <input list="senarai-lokaliti" id="lokaliti" placeholder="PILIH ATAU TAIP BAHARU..." required>
     <datalist id="senarai-lokaliti">
-        <option value="Kg Setia">
-        <option value="Taman Maju">
-        <option value="Desa Aman">
+        <option value="KG SETIA">
+        <option value="TAMAN MAJU">
+        <option value="DESA AMAN">
     </datalist>
 
     <label>Tindakan:</label>
@@ -44,7 +47,7 @@
 
     <label id="label_id_utama">ID Bekas:</label>
     <div class="flex-row">
-        <input type="text" id="id_bekas" placeholder="BKS-001" style="width: 65%;" required>
+        <input type="text" id="id_bekas" placeholder="SO-001" style="width: 65%;" required>
         <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
     </div>
 
@@ -68,7 +71,7 @@
         <div id="divBekasBaharu" class="hidden">
             <label style="color: #d32f2f;">ID Bekas BAHARU:</label>
             <div class="flex-row">
-                <input type="text" id="id_bekas_baharu" placeholder="BKS-002" style="width: 65%;">
+                <input type="text" id="id_bekas_baharu" placeholder="SO-002" style="width: 65%;">
                 <button type="button" class="kamera" onclick="mulaImbas('id_bekas_baharu')">📷 QR</button>
             </div>
         </div>
@@ -76,6 +79,9 @@
     
     <div id="reader"></div>
     <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
+
+    <label>Catatan (Pilihan):</label>
+    <textarea id="catatan" rows="2" placeholder="CONTOH: BEKAS PECAH..."></textarea>
 
     <button onclick="simpanData()">Simpan (Luar Talian)</button>
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
@@ -186,31 +192,40 @@
             return;
         }
 
-        let lokaliti = document.getElementById("lokaliti").value;
-        let tindakan = document.getElementById("tindakan").value;
-        let status = document.getElementById("status").value;
-        let id_bekas = document.getElementById("id_bekas").value;
+        // Ambil data asal dari borang
+        let tindakan_asal = document.getElementById("tindakan").value;
         let ganti = document.getElementById("ganti_bekas").value;
-        let id_baharu = document.getElementById("id_bekas_baharu").value;
-        let tarikh = new Date().toLocaleDateString('en-GB');
-        let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
+        let id_bekas_asal = document.getElementById("id_bekas").value;
+        let lokaliti_asal = document.getElementById("lokaliti").value;
 
-        if (!lokaliti || !tindakan || !id_bekas) {
+        if (!lokaliti_asal || !tindakan_asal || !id_bekas_asal) {
             alert("Sila lengkapkan borang utama.");
             return;
         }
 
+        // KOD BAHARU: Tukar SEMUA pembolehubah menjadi HURUF BESAR
+        let lokaliti = lokaliti_asal.toUpperCase();
+        let tindakan = tindakan_asal.toUpperCase();
+        let status = document.getElementById("status").value.toUpperCase();
+        let id_bekas = id_bekas_asal.toUpperCase();
+        let id_baharu = document.getElementById("id_bekas_baharu").value.toUpperCase();
+        let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
+        
+        let tarikh = new Date().toLocaleDateString('en-GB');
+        let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
+
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
 
-        if (tindakan === "Pasang") {
-            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa });
+        // Hantar data yang telah di'besarkan' ke memori
+        if (tindakan_asal === "Pasang") {
+            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
         } 
-        else if (tindakan === "Kutip") {
-            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa });
+        else if (tindakan_asal === "Kutip") {
+            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
             
             if (ganti === "YA") {
                 if (!id_baharu) { alert("Sila masukkan ID Bekas Baharu."); return; }
-                senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas: id_baharu, tindakan: "Pasang", status: "N/A", latitud: latSemasa, longitud: lngSemasa });
+                senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas: id_baharu, tindakan: "PASANG", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             }
         }
 
@@ -219,7 +234,8 @@
         
         document.getElementById("id_bekas").value = ""; 
         document.getElementById("id_bekas_baharu").value = "";
-        if(tindakan === "Kutip") { urusTindakan(); }
+        document.getElementById("catatan").value = ""; 
+        if(tindakan_asal === "Kutip") { urusTindakan(); }
         kiraRekod();
     }
 
@@ -239,6 +255,9 @@
         let promises = senaraiRekod.map(rekod => 
             fetch(WEB_APP_URL, {
                 method: "POST",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
                 body: JSON.stringify(rekod),
             }).then(response => response.json())
         );
