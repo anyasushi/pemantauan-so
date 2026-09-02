@@ -27,7 +27,6 @@
 <div class="container">
     <h2>Pemantauan SO</h2>
     
-    <!-- 1. Datalist Hibrid Lokaliti -->
     <label>Lokaliti:</label>
     <input list="senarai-lokaliti" id="lokaliti" placeholder="Pilih atau taip baharu..." required>
     <datalist id="senarai-lokaliti">
@@ -43,14 +42,12 @@
         <option value="Kutip">Kutip & Ganti</option>
     </select>
 
-    <!-- 2. Ruang ID Bekas Utama (Lama/Baharu) -->
     <label id="label_id_utama">ID Bekas:</label>
     <div class="flex-row">
         <input type="text" id="id_bekas" placeholder="BKS-001" style="width: 65%;" required>
         <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
     </div>
 
-    <!-- 3. Ruang Kutipan (Hanya muncul jika "Kutip" dipilih) -->
     <div id="ruangKutip" class="hidden ruang-ganti">
         <label>Status Bekas Lama:</label>
         <select id="status" onchange="urusStatus()">
@@ -77,7 +74,6 @@
         </div>
     </div>
     
-    <!-- Ruang Kamera Paparan QR -->
     <div id="reader"></div>
     <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
@@ -96,7 +92,6 @@
     let html5QrCode;
     let sasaranQR = ""; 
 
-    // --- LOGIK UI TEAM B ---
     function urusTindakan() {
         var tindakan = document.getElementById("tindakan").value;
         var ruangKutip = document.getElementById("ruangKutip");
@@ -119,7 +114,7 @@
         var status = document.getElementById("status").value;
         if (status !== "N/A") {
             document.getElementById("divGanti").classList.remove("hidden");
-            document.getElementById("ganti_bekas").value = "YA"; // Auto-select YA
+            document.getElementById("ganti_bekas").value = "YA"; 
             urusGanti(); 
         }
     }
@@ -131,17 +126,15 @@
 
         if (ganti === "YA") {
             divBaharu.classList.remove("hidden");
-            // Logik GPS Pintar
             if (status === "MUSNAH" || status === "HILANG") {
                 alert("⚠️ AMARAN: Spot ini tidak selamat (Kes Hilang/Musnah). Sila letak bekas baharu di spot lain dan sistem akan menarik koordinat GPS yang baharu.");
-                dapatkanGPS(); // Tarik GPS lokasi baharu
+                dapatkanGPS(); 
             }
         } else {
             divBaharu.classList.add("hidden");
         }
     }
 
-    // --- FUNGSI GPS ---
     function dapatkanGPS() {
         if (navigator.geolocation) {
             document.getElementById("gps_status").innerText = "Mencari lokasi...";
@@ -160,9 +153,8 @@
     }
     window.onload = dapatkanGPS;
 
-    // --- FUNGSI KAMERA QR ---
     function mulaImbas(targetInput) {
-        sasaranQR = targetInput; // Tentukan kotak mana yang akan terima kod QR
+        sasaranQR = targetInput; 
         document.getElementById('reader').style.display = "block";
         document.getElementById('btnTutupKamera').style.display = "block";
         
@@ -188,7 +180,6 @@
         }
     }
 
-    // --- FUNGSI SIMPAN (DWI-REKOD) ---
     function simpanData() {
         if (!latSemasa || !lngSemasa) {
             alert("Sila tunggu koordinat GPS didapati terlebih dahulu.");
@@ -212,17 +203,13 @@
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
 
         if (tindakan === "Pasang") {
-            // REKOD 1: Pemasangan Biasa (Team A)
             senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa });
         } 
         else if (tindakan === "Kutip") {
-            // REKOD 1: Kutip Bekas Lama (Team B)
             senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa });
             
-            // REKOD 2: Pasang Bekas Baharu (Hanya jika YA)
             if (ganti === "YA") {
                 if (!id_baharu) { alert("Sila masukkan ID Bekas Baharu."); return; }
-                // Sistem secara magik cipta baris data ke-2 sebagai Pemasangan baharu!
                 senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas: id_baharu, tindakan: "Pasang", status: "N/A", latitud: latSemasa, longitud: lngSemasa });
             }
         }
@@ -230,10 +217,9 @@
         localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
         alert("Data berjaya disimpan!");
         
-        // Reset ID untuk tugasan seterusnya (Kekalkan lokaliti)
         document.getElementById("id_bekas").value = ""; 
         document.getElementById("id_bekas_baharu").value = "";
-        if(tindakan === "Kutip") { urusTindakan(); } // Reset UI Kutipan
+        if(tindakan === "Kutip") { urusTindakan(); }
         kiraRekod();
     }
 
@@ -245,27 +231,30 @@
 
     function syncData() {
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        if (senaraiRekod.length === 0) { alert("Tiada data baharu."); return; }
+        if (senaraiRekod.length === 0) { alert("Tiada data baharu untuk di-sync."); return; }
 
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
-        document.querySelector(".sync").innerText = "Sedang Sync...";
+        document.querySelector(".sync").innerText = "Sedang Sync (Mohon Tunggu)...";
 
-        senaraiRekod.forEach((rekod, index) => {
-            fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(rekod) })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    senaraiRekod.splice(index, 1);
-                    localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
-                    kiraRekod();
-                }
-            }).catch(error => console.error('Error:', error));
-        });
+        let promises = senaraiRekod.map(rekod => 
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify(rekod),
+            }).then(response => response.json())
+        );
 
-        setTimeout(() => {
-            document.querySelector(".sync").innerText = "Sync ke Server ☁️";
-            alert("Proses sync selesai!");
-        }, 3000);
+        Promise.all(promises)
+            .then(results => {
+                localStorage.setItem("dataSO", JSON.stringify([]));
+                kiraRekod();
+                document.querySelector(".sync").innerText = "Sync ke Server ☁️";
+                alert("Semua data berjaya masuk ke Google Sheets!");
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.querySelector(".sync").innerText = "Sync ke Server ☁️";
+                alert("Ralat! Pastikan internet anda stabil.");
+            });
     }
 </script>
 
