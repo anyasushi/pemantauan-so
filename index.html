@@ -27,8 +27,16 @@
 <div class="container">
     <h2>Pemantauan SO</h2>
     
-    <label>Lokaliti:</label>
-    <input type="text" id="lokaliti" placeholder="Contoh: Kg Setia" required>
+<label>Lokaliti:</label>
+    <input list="senarai-lokaliti" id="lokaliti" placeholder="Pilih atau taip lokaliti baharu..." required>
+    
+    <!-- Senarai cadangan Dropdown -->
+    <datalist id="senarai-lokaliti">
+        <option value="Kg Setia">
+        <option value="Taman Maju">
+        <option value="Desa Aman">
+        <option value="Klinik Kesihatan Presint 9">
+    </datalist>
 
     <label>Tindakan:</label>
     <select id="tindakan" onchange="paparStatus()">
