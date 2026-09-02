@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem SO Pintar</title>
-    <!-- Pustaka Pengimbas QR -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
@@ -14,12 +13,13 @@
         input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button.sync { background-color: #007bff; }
-        button.kamera { background-color: #17a2b8; margin-top: 0; width: 30%; }
+        button.kamera { background-color: #17a2b8; margin-top: 0; width: 35%; }
         button.tutup-kamera { background-color: #dc3545; display: none; }
         .hidden { display: none; }
         .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; }
         .flex-row { display: flex; gap: 10px; align-items: center; }
         #reader { width: 100%; margin-top: 10px; display: none; }
+        .ruang-ganti { border-left: 4px solid #ffc107; padding-left: 10px; margin-top: 15px; background: #fffdf5; padding-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -27,38 +27,54 @@
 <div class="container">
     <h2>Pemantauan SO</h2>
     
-<label>Lokaliti:</label>
-    <input list="senarai-lokaliti" id="lokaliti" placeholder="Pilih atau taip lokaliti baharu..." required>
-    
-    <!-- Senarai cadangan Dropdown -->
+    <!-- 1. Datalist Hibrid Lokaliti -->
+    <label>Lokaliti:</label>
+    <input list="senarai-lokaliti" id="lokaliti" placeholder="Pilih atau taip baharu..." required>
     <datalist id="senarai-lokaliti">
         <option value="Kg Setia">
         <option value="Taman Maju">
         <option value="Desa Aman">
-        <option value="Klinik Kesihatan Presint 9">
     </datalist>
 
     <label>Tindakan:</label>
-    <select id="tindakan" onchange="paparStatus()">
+    <select id="tindakan" onchange="urusTindakan()">
         <option value="">-- Pilih Tindakan --</option>
         <option value="Pasang">Pasang (R1/Bekas Baharu)</option>
         <option value="Kutip">Kutip & Ganti</option>
     </select>
 
-    <div id="ruangStatus" class="hidden">
+    <!-- 2. Ruang ID Bekas Utama (Lama/Baharu) -->
+    <label id="label_id_utama">ID Bekas:</label>
+    <div class="flex-row">
+        <input type="text" id="id_bekas" placeholder="BKS-001" style="width: 65%;" required>
+        <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
+    </div>
+
+    <!-- 3. Ruang Kutipan (Hanya muncul jika "Kutip" dipilih) -->
+    <div id="ruangKutip" class="hidden ruang-ganti">
         <label>Status Bekas Lama:</label>
-        <select id="status">
+        <select id="status" onchange="urusStatus()">
             <option value="N/A">-- Pilih Status --</option>
             <option value="BAIK">BAIK</option>
             <option value="MUSNAH">MUSNAH</option>
             <option value="HILANG">HILANG</option>
         </select>
-    </div>
 
-    <label>ID Bekas:</label>
-    <div class="flex-row">
-        <input type="text" id="id_bekas" placeholder="BKS-001" style="width: 70%;" required>
-        <button type="button" class="kamera" onclick="mulaImbas()">📷 QR</button>
+        <div id="divGanti" class="hidden">
+            <label>Ganti Bekas Baharu?</label>
+            <select id="ganti_bekas" onchange="urusGanti()">
+                <option value="TIDAK">TIDAK</option>
+                <option value="YA">YA (Letak Bekas Baharu)</option>
+            </select>
+        </div>
+
+        <div id="divBekasBaharu" class="hidden">
+            <label style="color: #d32f2f;">ID Bekas BAHARU:</label>
+            <div class="flex-row">
+                <input type="text" id="id_bekas_baharu" placeholder="BKS-002" style="width: 65%;">
+                <button type="button" class="kamera" onclick="mulaImbas('id_bekas_baharu')">📷 QR</button>
+            </div>
+        </div>
     </div>
     
     <!-- Ruang Kamera Paparan QR -->
@@ -78,18 +94,54 @@
     let latSemasa = "";
     let lngSemasa = "";
     let html5QrCode;
+    let sasaranQR = ""; 
 
-    function paparStatus() {
+    // --- LOGIK UI TEAM B ---
+    function urusTindakan() {
         var tindakan = document.getElementById("tindakan").value;
-        var ruangStatus = document.getElementById("ruangStatus");
+        var ruangKutip = document.getElementById("ruangKutip");
+        var labelId = document.getElementById("label_id_utama");
+
         if (tindakan === "Kutip") {
-            ruangStatus.classList.remove("hidden");
+            ruangKutip.classList.remove("hidden");
+            labelId.innerText = "ID Bekas LAMA:";
         } else {
-            ruangStatus.classList.add("hidden");
+            ruangKutip.classList.add("hidden");
+            labelId.innerText = "ID Bekas:";
             document.getElementById("status").value = "N/A";
+            document.getElementById("ganti_bekas").value = "TIDAK";
+            document.getElementById("divGanti").classList.add("hidden");
+            document.getElementById("divBekasBaharu").classList.add("hidden");
         }
     }
 
+    function urusStatus() {
+        var status = document.getElementById("status").value;
+        if (status !== "N/A") {
+            document.getElementById("divGanti").classList.remove("hidden");
+            document.getElementById("ganti_bekas").value = "YA"; // Auto-select YA
+            urusGanti(); 
+        }
+    }
+
+    function urusGanti() {
+        var ganti = document.getElementById("ganti_bekas").value;
+        var status = document.getElementById("status").value;
+        var divBaharu = document.getElementById("divBekasBaharu");
+
+        if (ganti === "YA") {
+            divBaharu.classList.remove("hidden");
+            // Logik GPS Pintar
+            if (status === "MUSNAH" || status === "HILANG") {
+                alert("⚠️ AMARAN: Spot ini tidak selamat (Kes Hilang/Musnah). Sila letak bekas baharu di spot lain dan sistem akan menarik koordinat GPS yang baharu.");
+                dapatkanGPS(); // Tarik GPS lokasi baharu
+            }
+        } else {
+            divBaharu.classList.add("hidden");
+        }
+    }
+
+    // --- FUNGSI GPS ---
     function dapatkanGPS() {
         if (navigator.geolocation) {
             document.getElementById("gps_status").innerText = "Mencari lokasi...";
@@ -97,39 +149,34 @@
                 function(position) {
                     latSemasa = position.coords.latitude;
                     lngSemasa = position.coords.longitude;
-                    document.getElementById("gps_status").innerText = "✅ Berjaya didapati";
+                    document.getElementById("gps_status").innerText = "✅ Berjaya didapati (" + latSemasa.toFixed(5) + ")";
                 },
                 function(error) {
                     document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon";
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
     }
     window.onload = dapatkanGPS;
 
     // --- FUNGSI KAMERA QR ---
-    function mulaImbas() {
+    function mulaImbas(targetInput) {
+        sasaranQR = targetInput; // Tentukan kotak mana yang akan terima kod QR
         document.getElementById('reader').style.display = "block";
         document.getElementById('btnTutupKamera').style.display = "block";
         
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
-            { facingMode: "environment" }, // Guna kamera belakang
+            { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText, decodedResult) => {
-                // Jika berjaya baca QR
-                document.getElementById('id_bekas').value = decodedText;
+                document.getElementById(sasaranQR).value = decodedText;
                 hentiImbas();
-                // Getaran telefon jika disokong
                 if (navigator.vibrate) navigator.vibrate(200);
             },
-            (errorMessage) => {
-                // Abaikan ralat kecil semasa mencari QR
-            }
-        ).catch((err) => {
-            alert("Ralat kamera: " + err);
-        });
+            (errorMessage) => {}
+        ).catch((err) => alert("Ralat kamera: " + err));
     }
 
     function hentiImbas() {
@@ -137,10 +184,11 @@
             html5QrCode.stop().then(() => {
                 document.getElementById('reader').style.display = "none";
                 document.getElementById('btnTutupKamera').style.display = "none";
-            }).catch(err => console.log("Gagal tutup kamera", err));
+            }).catch(err => console.log(err));
         }
     }
 
+    // --- FUNGSI SIMPAN (DWI-REKOD) ---
     function simpanData() {
         if (!latSemasa || !lngSemasa) {
             alert("Sila tunggu koordinat GPS didapati terlebih dahulu.");
@@ -151,22 +199,41 @@
         let tindakan = document.getElementById("tindakan").value;
         let status = document.getElementById("status").value;
         let id_bekas = document.getElementById("id_bekas").value;
+        let ganti = document.getElementById("ganti_bekas").value;
+        let id_baharu = document.getElementById("id_bekas_baharu").value;
         let tarikh = new Date().toLocaleDateString('en-GB');
         let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
 
         if (!lokaliti || !tindakan || !id_bekas) {
-            alert("Sila lengkapkan borang.");
+            alert("Sila lengkapkan borang utama.");
             return;
         }
 
-        let rekodBaru = { lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa };
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        senaraiRekod.push(rekodBaru);
-        localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
 
-        alert("Data disimpan di dalam memori!");
-        // Kosongkan ID Bekas untuk imbasan seterusnya
+        if (tindakan === "Pasang") {
+            // REKOD 1: Pemasangan Biasa (Team A)
+            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa });
+        } 
+        else if (tindakan === "Kutip") {
+            // REKOD 1: Kutip Bekas Lama (Team B)
+            senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas, tindakan, status, latitud: latSemasa, longitud: lngSemasa });
+            
+            // REKOD 2: Pasang Bekas Baharu (Hanya jika YA)
+            if (ganti === "YA") {
+                if (!id_baharu) { alert("Sila masukkan ID Bekas Baharu."); return; }
+                // Sistem secara magik cipta baris data ke-2 sebagai Pemasangan baharu!
+                senaraiRekod.push({ lokaliti, tarikh, masa, id_bekas: id_baharu, tindakan: "Pasang", status: "N/A", latitud: latSemasa, longitud: lngSemasa });
+            }
+        }
+
+        localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
+        alert("Data berjaya disimpan!");
+        
+        // Reset ID untuk tugasan seterusnya (Kekalkan lokaliti)
         document.getElementById("id_bekas").value = ""; 
+        document.getElementById("id_bekas_baharu").value = "";
+        if(tindakan === "Kutip") { urusTindakan(); } // Reset UI Kutipan
         kiraRekod();
     }
 
@@ -178,20 +245,13 @@
 
     function syncData() {
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        if (senaraiRekod.length === 0) {
-            alert("Tiada data baharu untuk di-sync.");
-            return;
-        }
+        if (senaraiRekod.length === 0) { alert("Tiada data baharu."); return; }
 
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
-
         document.querySelector(".sync").innerText = "Sedang Sync...";
 
         senaraiRekod.forEach((rekod, index) => {
-            fetch(WEB_APP_URL, {
-                method: "POST",
-                body: JSON.stringify(rekod),
-            })
+            fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(rekod) })
             .then(response => response.json())
             .then(data => {
                 if (data.status === "success") {
@@ -199,8 +259,7 @@
                     localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
                     kiraRekod();
                 }
-            })
-            .catch(error => console.error('Error:', error));
+            }).catch(error => console.error('Error:', error));
         });
 
         setTimeout(() => {
