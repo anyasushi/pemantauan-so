@@ -346,7 +346,7 @@
         
         // Reset Borang
         if(isPukal) {
-            document.getElementById("label_last_id").innerText = "Rekod Terakhir (Pukal): " + senaraiID[0] + " - " + rekodAkhirID;
+            document.getElementById("label_last_id").innerText = "Rekod Terakhir (Pukal): " + senaraiID[0] + " ~ " + rekodAkhirID;
         } else {
             document.getElementById("label_last_id").innerText = "Rekod Terakhir: " + rekodAkhirID;
         }
@@ -371,29 +371,33 @@
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         if (senaraiRekod.length === 0) { alert("Tiada data baharu untuk di-sync."); return; }
 
+        // MESTI letak URL Apps Script anda yang sebenar di bawah ini
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
+        
         document.querySelector(".sync").innerText = "Sedang Sync (Mohon Tunggu)...";
 
-        let promises = senaraiRekod.map(rekod => 
-            fetch(WEB_APP_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(rekod),
-            }).then(response => response.json())
-        );
-
-        Promise.all(promises)
-            .then(results => {
+        // Hantar SELURUH DATA sekaligus dalam satu penghantaran (Batching)
+        fetch(WEB_APP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(senaraiRekod), 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === "success") {
                 localStorage.setItem("dataSO", JSON.stringify([]));
                 kiraRekod();
                 document.querySelector(".sync").innerText = "Sync ke Server ☁️";
-                alert("Semua data berjaya masuk ke Google Sheets!");
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.querySelector(".sync").innerText = "Sync ke Server ☁️";
-                alert("Ralat! Pastikan internet anda stabil.");
-            });
+                alert("Semua data berjaya masuk ke Google Sheets mengikut urutan!");
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.querySelector(".sync").innerText = "Sync ke Server ☁️";
+            alert("Ralat! Pastikan internet anda stabil.");
+        });
     }
 </script>
 
