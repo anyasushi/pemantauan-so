@@ -107,7 +107,7 @@
     <span id="label_last_id" class="teks-info">Rekod Terakhir: Tiada</span>
 
     <div id="ruangKutip" class="hidden ruang-ganti">
-        <label>Status Bekas Lama:</label>
+        <label>Status Bekas LAMA:</label>
         <select id="status" onchange="urusStatus()">
             <option value="N/A">-- Pilih Status --</option>
             <option value="BAIK">BAIK</option>
@@ -116,22 +116,11 @@
         </select>
 
         <div id="divGanti" class="hidden">
-            <label>Ganti Bekas Baharu?</label>
+            <label>Ganti Bekas Baharu (ID Sama)?</label>
             <select id="ganti_bekas" onchange="urusGanti()">
                 <option value="TIDAK">TIDAK</option>
-                <option value="YA">YA (Letak Bekas Baharu)</option>
+                <option value="YA">YA (Ganti Bekas & Kekalkan ID)</option>
             </select>
-        </div>
-
-        <div id="divBekasBaharu" class="hidden">
-            <label id="label_id_baharu" style="color: #d32f2f;">ID Bekas BAHARU:</label>
-            <div class="flex-row">
-                <select id="id_bekas_baharu" style="width: 65%;" onchange="semakID(this, 'amaran_id_baharu')">
-                    <option value="">-- PILIH ID --</option>
-                </select>
-                <button type="button" class="kamera" onclick="mulaImbas('id_bekas_baharu')">📷 QR</button>
-            </div>
-            <span id="amaran_id_baharu" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini! (Boleh diteruskan jika untuk pembetulan)</span>
         </div>
     </div>
     
@@ -197,7 +186,6 @@
         
         let selectID = document.getElementById("id_bekas");
         let selectAkhir = document.getElementById("id_bekas_akhir");
-        let selectBaharu = document.getElementById("id_bekas_baharu");
         
         let htmlOptions = '<option value="">-- PILIH ID --</option>';
         let sejarahSemasa = dapatkanSejarahLokaliti(); 
@@ -205,7 +193,6 @@
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
             if (sejarahSemasa.includes(namaID)) {
-                // KOD DIKEMAS KINI: Dibuang 'disabled' supaya masih boleh dipilih jika tersilap
                 htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`;
             } else {
                 htmlOptions += `<option value="${namaID}">${namaID}</option>`;
@@ -215,7 +202,6 @@
         let currentID = selectID.value;
         selectID.innerHTML = htmlOptions;
         selectAkhir.innerHTML = htmlOptions;
-        selectBaharu.innerHTML = htmlOptions;
         if(currentID) selectID.value = currentID;
     }
 
@@ -224,11 +210,9 @@
         if (isPukal) {
             document.getElementById("label_id_utama").innerText = "ID Bekas (MULA):";
             document.getElementById("ruang_pukal_akhir").classList.remove("hidden");
-            document.getElementById("label_id_baharu").innerText = "ID Bekas BAHARU (MULA):";
         } else {
             document.getElementById("label_id_utama").innerText = "ID Bekas:";
             document.getElementById("ruang_pukal_akhir").classList.add("hidden");
-            document.getElementById("label_id_baharu").innerText = "ID Bekas BAHARU:";
         }
     }
 
@@ -248,7 +232,6 @@
             document.getElementById("status").value = "N/A";
             document.getElementById("ganti_bekas").value = "TIDAK";
             document.getElementById("divGanti").classList.add("hidden");
-            document.getElementById("divBekasBaharu").classList.add("hidden");
         }
     }
 
@@ -263,13 +246,11 @@
     function urusGanti() {
         var ganti = document.getElementById("ganti_bekas").value;
         var status = document.getElementById("status").value;
-        var divBaharu = document.getElementById("divBekasBaharu");
         if (ganti === "YA") {
-            divBaharu.classList.remove("hidden");
             if (status === "MUSNAH" || status === "HILANG") {
                 alert("⚠️ AMARAN: Spot ini tidak selamat. Sila letak bekas baharu di spot lain (Sila Refresh GPS secara manual jika beralih lokasi).");
             }
-        } else { divBaharu.classList.add("hidden"); }
+        }
     }
 
     function dapatkanGPS() {
@@ -306,7 +287,6 @@
                 }
                 inputTarget.value = decodedText;
                 if(sasaranQR === "id_bekas") semakID(document.getElementById(sasaranQR), "amaran_id_utama");
-                if(sasaranQR === "id_bekas_baharu") semakID(document.getElementById(sasaranQR), "amaran_id_baharu");
                 hentiImbas();
                 if (navigator.vibrate) navigator.vibrate(200);
             }, (err) => {}
@@ -377,7 +357,6 @@
         }
 
         let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : "";
-
         let tindakan = tindakan_asal.toUpperCase();
         let status = document.getElementById("status").value.toUpperCase();
         let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
@@ -387,24 +366,18 @@
         
         let rekodAkhirID = "";
 
-        senaraiID.forEach((id_semasa, index) => {
+        senaraiID.forEach((id_semasa) => {
             if (tindakan_asal === "Pasang") {
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             } 
             else if (tindakan_asal === "Kutip") {
+                // Rekod Kutip
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                
                 if (ganti === "YA") {
-                    let id_baharu_mula = document.getElementById("id_bekas_baharu").value.toUpperCase();
-                    if (!id_baharu_mula) { alert("Sila masukkan ID Bekas Baharu."); return; }
-                    let id_baharu_semasa = id_baharu_mula;
-                    if (isPukal) {
-                        let dataB = ekstrakID(id_baharu_mula);
-                        if (!dataB) { alert("Format ID Baharu tidak sah."); return; }
-                        let numKira = dataB.num + index; 
-                        id_baharu_semasa = dataB.prefix + String(numKira).padStart(dataB.padLength, '0');
-                    }
-                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_baharu_semasa, tindakan: "PASANG", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
-                    if (!sejarahID[lokaliti].includes(id_baharu_semasa)) sejarahID[lokaliti].push(id_baharu_semasa);
+                    // Rekod Gantian (Guna ID yang SAMA, Tindakan ditukar ke GANTI)
+                    let catatan_ganti = CATATAN ? CATATAN + " [GANTIAN BEKAS]" : "[GANTIAN BEKAS]";
+                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_ganti });
                 }
             }
             if (!sejarahID[lokaliti].includes(id_semasa)) sejarahID[lokaliti].push(id_semasa);
@@ -420,7 +393,6 @@
         
         document.getElementById("id_bekas").value = ""; 
         document.getElementById("id_bekas_akhir").value = ""; 
-        document.getElementById("id_bekas_baharu").value = "";
         document.getElementById("catatan").value = ""; 
         document.getElementById("amaran_id_utama").style.display = "none";
         
