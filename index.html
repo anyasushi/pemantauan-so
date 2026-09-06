@@ -26,8 +26,6 @@
         .teks-amaran { color: red; font-size: 0.85em; font-weight: bold; display: none; margin-top: 2px; }
         .teks-info { color: #007bff; font-size: 0.85em; font-weight: bold; display: block; margin-top: 5px; }
         .mod-pukal-box { margin-top: 15px; background: #e3f2fd; padding: 10px; border-radius: 5px; border: 1px solid #90caf9; }
-        
-        /* Tambahan CSS untuk Ruang Premis */
         .ruang-premis { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #17a2b8; }
         .ruang-premis label { font-size: 0.9em; color: #555; margin-top: 5px; }
     </style>
@@ -45,7 +43,6 @@
         <option value="DESA AMAN">
     </datalist>
 
-    <!-- FUNGSI BAHARU: Pilihan Strata atau Landed -->
     <label>Jenis Kediaman:</label>
     <select id="jenis_premis" onchange="urusJenisPremis()">
         <option value="">-- PILIH JENIS --</option>
@@ -65,7 +62,7 @@
         <input type="text" id="landed_jalan" placeholder="CONTOH: JALAN KASTURI 1">
     </div>
 
-    <label>Jumlah Bekas:</label>
+    <label>Jumlah Bekas (Lokaliti Ini):</label>
     <select id="jumlah_bekas" onchange="urusJumlahBekas()">
         <option value="">-- PILIH JUMLAH --</option>
         <option value="150">150</option>
@@ -142,7 +139,7 @@
     <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
     <label>Catatan (Deskripsi Lokasi):</label>
-    <textarea id="catatan" rows="2" placeholder="CONTOH: BEKAS PECAH..."></textarea>
+    <textarea id="catatan" rows="2" placeholder="CONTOH: TEPI PAGAR..."></textarea>
 
     <button onclick="simpanData()">Simpan (Luar Talian)</button>
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
@@ -163,7 +160,6 @@
     let sasaranQR = ""; 
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
 
-    // FUNGSI BAHARU: Kawal paparan Strata / Landed
     function urusJenisPremis() {
         let jenis = document.getElementById("jenis_premis").value;
         let divStrata = document.getElementById("ruang_strata");
@@ -172,18 +168,12 @@
         if (jenis === "STRATA") {
             divStrata.classList.remove("hidden");
             divLanded.classList.add("hidden");
-            document.getElementById("landed_jalan").value = "";
         } else if (jenis === "LANDED") {
             divLanded.classList.remove("hidden");
             divStrata.classList.add("hidden");
-            document.getElementById("strata_blok").value = "";
-            document.getElementById("strata_tingkat").value = "";
         } else {
             divStrata.classList.add("hidden");
             divLanded.classList.add("hidden");
-            document.getElementById("landed_jalan").value = "";
-            document.getElementById("strata_blok").value = "";
-            document.getElementById("strata_tingkat").value = "";
         }
     }
 
@@ -371,20 +361,22 @@
             if (!teruskan) return;
         }
 
-        // FUNGSI BAHARU: Susun Format Jalan/Blok secara automatik
         let jenis_premis = document.getElementById("jenis_premis").value;
-        let jalan_blok = "";
+        let jalan_blok_raw = "";
         
         if (jenis_premis === "STRATA") {
             let b = document.getElementById("strata_blok").value.toUpperCase();
             let t = document.getElementById("strata_tingkat").value.toUpperCase();
-            if (b && t) jalan_blok = "BLOK " + b + " TINGKAT " + t;
-            else if (b) jalan_blok = "BLOK " + b;
-            else if (t) jalan_blok = "TINGKAT " + t;
+            if (b && t) jalan_blok_raw = "BLOK " + b + " TINGKAT " + t;
+            else if (b) jalan_blok_raw = "BLOK " + b;
+            else if (t) jalan_blok_raw = "TINGKAT " + t;
         } else if (jenis_premis === "LANDED") {
             let j = document.getElementById("landed_jalan").value.toUpperCase();
-            if (j) jalan_blok = j; // Kekalkan JALAN KASTURI 1, dsb
+            if (j) jalan_blok_raw = j;
         }
+
+        // FUNGSI BAHARU: Tambah koma atas (') untuk elak Google Sheets tukar jadi tarikh
+        let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : "";
 
         let tindakan = tindakan_asal.toUpperCase();
         let status = document.getElementById("status").value.toUpperCase();
@@ -432,11 +424,6 @@
         document.getElementById("catatan").value = ""; 
         document.getElementById("amaran_id_utama").style.display = "none";
         
-        // Kosongkan semula kotak Strata/Landed tanpa menukar jenis premis
-        document.getElementById("strata_blok").value = "";
-        document.getElementById("strata_tingkat").value = "";
-        document.getElementById("landed_jalan").value = "";
-
         if(tindakan_asal === "Kutip") { urusTindakan(); }
         janaSenaraiID(); 
         kiraRekod();
