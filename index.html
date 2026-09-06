@@ -375,9 +375,8 @@
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 
                 if (ganti === "YA") {
-                    // Rekod Gantian (Guna ID yang SAMA, Tindakan ditukar ke GANTI)
-                    let catatan_ganti = CATATAN ? CATATAN + " [GANTIAN BEKAS]" : "[GANTIAN BEKAS]";
-                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_ganti });
+                    // Rekod Gantian (Guna ID yang SAMA, Tindakan ditukar ke GANTI, dan hanya ambil catatan asal)
+                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 }
             }
             if (!sejarahID[lokaliti].includes(id_semasa)) sejarahID[lokaliti].push(id_semasa);
