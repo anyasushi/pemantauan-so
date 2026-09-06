@@ -26,6 +26,10 @@
         .teks-amaran { color: red; font-size: 0.85em; font-weight: bold; display: none; margin-top: 2px; }
         .teks-info { color: #007bff; font-size: 0.85em; font-weight: bold; display: block; margin-top: 5px; }
         .mod-pukal-box { margin-top: 15px; background: #e3f2fd; padding: 10px; border-radius: 5px; border: 1px solid #90caf9; }
+        
+        /* Tambahan CSS untuk Ruang Premis */
+        .ruang-premis { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #17a2b8; }
+        .ruang-premis label { font-size: 0.9em; color: #555; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -41,10 +45,27 @@
         <option value="DESA AMAN">
     </datalist>
 
-    <label>Jalan / Blok (Pilihan):</label>
-    <input type="text" id="jalan_blok" placeholder="CONTOH: JALAN 1 ATAU BLOK A">
+    <!-- FUNGSI BAHARU: Pilihan Strata atau Landed -->
+    <label>Jenis Kediaman:</label>
+    <select id="jenis_premis" onchange="urusJenisPremis()">
+        <option value="">-- PILIH JENIS --</option>
+        <option value="STRATA">STRATA (BERTINGKAT)</option>
+        <option value="LANDED">LANDED (ATAS TANAH)</option>
+    </select>
 
-    <label>Jumlah Bekas (Lokaliti Ini):</label>
+    <div id="ruang_strata" class="hidden ruang-premis" style="border-left-color: #007bff;">
+        <label>Blok:</label>
+        <input type="text" id="strata_blok" placeholder="CONTOH: A">
+        <label>Tingkat:</label>
+        <input type="text" id="strata_tingkat" placeholder="CONTOH: 3">
+    </div>
+
+    <div id="ruang_landed" class="hidden ruang-premis" style="border-left-color: #28a745;">
+        <label>Jalan:</label>
+        <input type="text" id="landed_jalan" placeholder="CONTOH: JALAN KASTURI 1">
+    </div>
+
+    <label>Jumlah Bekas:</label>
     <select id="jumlah_bekas" onchange="urusJumlahBekas()">
         <option value="">-- PILIH JUMLAH --</option>
         <option value="150">150</option>
@@ -69,7 +90,6 @@
 
     <label id="label_id_utama">ID Bekas:</label>
     <div class="flex-row">
-        <!-- Ditukar kepada <select> untuk dropdown scroll ke bawah (OS Native) -->
         <select id="id_bekas" style="width: 65%;" onchange="semakID(this, 'amaran_id_utama')" required>
             <option value="">-- PILIH ID --</option>
         </select>
@@ -122,7 +142,7 @@
     <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
     <label>Catatan (Deskripsi Lokasi):</label>
-    <textarea id="catatan" rows="2" placeholder="CONTOH: TEPI PAGAR..."></textarea>
+    <textarea id="catatan" rows="2" placeholder="CONTOH: BEKAS PECAH..."></textarea>
 
     <button onclick="simpanData()">Simpan (Luar Talian)</button>
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
@@ -130,7 +150,6 @@
     <div class="status-box">
         <div class="flex-row" style="margin-bottom: 5px;">
             <div><strong>Status GPS:</strong> <span id="gps_status">Menunggu...</span></div>
-            <!-- Butang Refresh GPS Baharu -->
             <button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 Refresh</button>
         </div>
         <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
@@ -142,9 +161,31 @@
     let lngSemasa = "";
     let html5QrCode;
     let sasaranQR = ""; 
-    
-    // Memori Pintar kini disimpan mengikut kategori Lokaliti (Objek)
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
+
+    // FUNGSI BAHARU: Kawal paparan Strata / Landed
+    function urusJenisPremis() {
+        let jenis = document.getElementById("jenis_premis").value;
+        let divStrata = document.getElementById("ruang_strata");
+        let divLanded = document.getElementById("ruang_landed");
+        
+        if (jenis === "STRATA") {
+            divStrata.classList.remove("hidden");
+            divLanded.classList.add("hidden");
+            document.getElementById("landed_jalan").value = "";
+        } else if (jenis === "LANDED") {
+            divLanded.classList.remove("hidden");
+            divStrata.classList.add("hidden");
+            document.getElementById("strata_blok").value = "";
+            document.getElementById("strata_tingkat").value = "";
+        } else {
+            divStrata.classList.add("hidden");
+            divLanded.classList.add("hidden");
+            document.getElementById("landed_jalan").value = "";
+            document.getElementById("strata_blok").value = "";
+            document.getElementById("strata_tingkat").value = "";
+        }
+    }
 
     function dapatkanSejarahLokaliti() {
         let lokaliti = document.getElementById("lokaliti").value.toUpperCase();
@@ -169,25 +210,21 @@
         let selectBaharu = document.getElementById("id_bekas_baharu");
         
         let htmlOptions = '<option value="">-- PILIH ID --</option>';
-        let sejarahSemasa = dapatkanSejarahLokaliti(); // Ambil sejarah khusus untuk lokaliti yang sedang ditaip
+        let sejarahSemasa = dapatkanSejarahLokaliti(); 
 
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
             if (sejarahSemasa.includes(namaID)) {
-                // Tanda selesai dan disable supaya tak boleh dipilih lagi
                 htmlOptions += `<option value="${namaID}" disabled>${namaID} [SELESAI]</option>`;
             } else {
                 htmlOptions += `<option value="${namaID}">${namaID}</option>`;
             }
         }
         
-        // Simpan sementara pilihan sedia ada (supaya tak hilang bila update)
         let currentID = selectID.value;
-        
         selectID.innerHTML = htmlOptions;
         selectAkhir.innerHTML = htmlOptions;
         selectBaharu.innerHTML = htmlOptions;
-        
         if(currentID) selectID.value = currentID;
     }
 
@@ -269,8 +306,6 @@
             { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText) => {
                 var inputTarget = document.getElementById(sasaranQR);
-                
-                // Pastikan nilai wujud dalam pilihan <select> sebelum diset
                 let optionExists = Array.from(inputTarget.options).some(opt => opt.value === decodedText);
                 if (!optionExists) {
                     let newOpt = document.createElement("option");
@@ -278,9 +313,7 @@
                     newOpt.text = decodedText;
                     inputTarget.appendChild(newOpt);
                 }
-                
                 inputTarget.value = decodedText;
-                
                 if(sasaranQR === "id_bekas") semakID(document.getElementById(sasaranQR), "amaran_id_utama");
                 if(sasaranQR === "id_bekas_baharu") semakID(document.getElementById(sasaranQR), "amaran_id_baharu");
                 hentiImbas();
@@ -338,7 +371,21 @@
             if (!teruskan) return;
         }
 
-        let jalan_blok = document.getElementById("jalan_blok").value.toUpperCase(); 
+        // FUNGSI BAHARU: Susun Format Jalan/Blok secara automatik
+        let jenis_premis = document.getElementById("jenis_premis").value;
+        let jalan_blok = "";
+        
+        if (jenis_premis === "STRATA") {
+            let b = document.getElementById("strata_blok").value.toUpperCase();
+            let t = document.getElementById("strata_tingkat").value.toUpperCase();
+            if (b && t) jalan_blok = "BLOK " + b + " TINGKAT " + t;
+            else if (b) jalan_blok = "BLOK " + b;
+            else if (t) jalan_blok = "TINGKAT " + t;
+        } else if (jenis_premis === "LANDED") {
+            let j = document.getElementById("landed_jalan").value.toUpperCase();
+            if (j) jalan_blok = j; // Kekalkan JALAN KASTURI 1, dsb
+        }
+
         let tindakan = tindakan_asal.toUpperCase();
         let status = document.getElementById("status").value.toUpperCase();
         let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
@@ -384,6 +431,12 @@
         document.getElementById("id_bekas_baharu").value = "";
         document.getElementById("catatan").value = ""; 
         document.getElementById("amaran_id_utama").style.display = "none";
+        
+        // Kosongkan semula kotak Strata/Landed tanpa menukar jenis premis
+        document.getElementById("strata_blok").value = "";
+        document.getElementById("strata_tingkat").value = "";
+        document.getElementById("landed_jalan").value = "";
+
         if(tindakan_asal === "Kutip") { urusTindakan(); }
         janaSenaraiID(); 
         kiraRekod();
