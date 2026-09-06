@@ -62,7 +62,7 @@
         <input type="text" id="landed_jalan" placeholder="CONTOH: JALAN KASTURI 1">
     </div>
 
-    <label>Jumlah Bekas (Lokaliti Ini):</label>
+    <label>Jumlah Bekas:</label>
     <select id="jumlah_bekas" onchange="urusJumlahBekas()">
         <option value="">-- PILIH JUMLAH --</option>
         <option value="150">150</option>
@@ -92,7 +92,7 @@
         </select>
         <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
     </div>
-    <span id="amaran_id_utama" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini!</span>
+    <span id="amaran_id_utama" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini! (Boleh diteruskan jika untuk pembetulan)</span>
 
     <div id="ruang_pukal_akhir" class="hidden">
         <label style="color:#0056b3;">ID Bekas (AKHIR):</label>
@@ -131,14 +131,14 @@
                 </select>
                 <button type="button" class="kamera" onclick="mulaImbas('id_bekas_baharu')">📷 QR</button>
             </div>
-            <span id="amaran_id_baharu" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini!</span>
+            <span id="amaran_id_baharu" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini! (Boleh diteruskan jika untuk pembetulan)</span>
         </div>
     </div>
     
     <div id="reader"></div>
     <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
-    <label>Catatan (Deskripsi Lokasi):</label>
+    <label>Catatan:</label>
     <textarea id="catatan" rows="2" placeholder="CONTOH: TEPI PAGAR..."></textarea>
 
     <button onclick="simpanData()">Simpan (Luar Talian)</button>
@@ -205,7 +205,8 @@
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
             if (sejarahSemasa.includes(namaID)) {
-                htmlOptions += `<option value="${namaID}" disabled>${namaID} [SELESAI]</option>`;
+                // KOD DIKEMAS KINI: Dibuang 'disabled' supaya masih boleh dipilih jika tersilap
+                htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`;
             } else {
                 htmlOptions += `<option value="${namaID}">${namaID}</option>`;
             }
@@ -357,7 +358,7 @@
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
         let idTindih = senaraiID.filter(id => sejarahID[lokaliti].includes(id));
         if (idTindih.length > 0) {
-            let teruskan = confirm("⚠️ Amaran: Terdapat ID yang telah direkodkan di lokaliti ini:\n" + idTindih.join(", ") + "\n\nTeruskan simpan?");
+            let teruskan = confirm("⚠️ Terdapat ID yang telah direkodkan di lokaliti ini:\n" + idTindih.join(", ") + "\n\nTeruskan simpan untuk memperbetulkan rekod ini?");
             if (!teruskan) return;
         }
 
@@ -375,7 +376,6 @@
             if (j) jalan_blok_raw = j;
         }
 
-        // FUNGSI BAHARU: Tambah koma atas (') untuk elak Google Sheets tukar jadi tarikh
         let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : "";
 
         let tindakan = tindakan_asal.toUpperCase();
