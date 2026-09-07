@@ -17,6 +17,7 @@
         button.kamera { background-color: #17a2b8; margin-top: 0; width: 35%; }
         button.tutup-kamera { background-color: #dc3545; display: none; }
         button.btn-refresh { background-color: #6c757d; color: white; border: none; padding: 5px 10px; margin-top: 0; width: auto; font-size: 0.8em; border-radius: 5px; cursor: pointer; }
+        button.btn-reset { background-color: #dc3545; color: white; border: none; padding: 5px 10px; margin-top: 10px; width: 100%; font-size: 0.85em; border-radius: 5px; cursor: pointer; }
         .hidden { display: none; }
         .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; border: 1px solid #ddd; }
         .flex-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
@@ -40,6 +41,7 @@
         .kad-bekas { background: #fffdf5; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
         .kad-bekas h3 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; }
         .kad-bekas p { margin: 0 0 10px 0; font-size: 0.85em; color: #555; font-weight: bold; }
+        .input-catatan-kad { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 0.85em; box-sizing: border-box; text-transform: uppercase;}
         .btn-kumpulan { display: flex; gap: 5px; }
         .btn-status { flex: 1; padding: 10px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; margin-top: 0; font-size: 0.9em; }
         .btn-baik { background-color: #28a745; }
@@ -48,7 +50,7 @@
         .selesai { background: #e9ecef; border-color: #ccc; opacity: 0.6; pointer-events: none; }
         .selesai-teks { display: none; color: #28a745; font-weight: bold; margin-top: 10px; font-size: 0.9em; text-align: center; }
         .selesai .selesai-teks { display: block; }
-        .selesai .btn-kumpulan { display: none; }
+        .selesai .btn-kumpulan, .selesai .input-catatan-kad { display: none; }
         .btn-tarik { width: 100%; background: #6f42c1; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; margin-bottom: 15px; cursor: pointer; margin-top: 0; }
     </style>
 </head>
@@ -187,12 +189,15 @@
             <button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 Refresh</button>
         </div>
         <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
+        
+        <!-- BUTANG RESET MEMORI UNTUK TESTING & SYIF BAHARU -->
+        <button type="button" class="btn-reset" onclick="resetMemori()">🧹 Kosongkan Memori [SELESAI]</button>
     </div>
 
 </div>
 
 <script>
-    // MASUKKAN URL APPS SCRIPT ANDA DI SINI SEKALI SAHAJA
+    // MASUKKAN URL APPS SCRIPT ANDA DI SINI
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
 
     let latSemasa = "";
@@ -200,6 +205,18 @@
     let html5QrCode;
     let sasaranQR = ""; 
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
+
+    // ---- FUNGSI RESET MEMORI ----
+    function resetMemori() {
+        let sah = confirm("Adakah anda pasti mahu kosongkan memori tanda [SELESAI] di telefon ini? (Nota: Ini TIDAK akan memadam data yang belum di-sync)");
+        if (sah) {
+            localStorage.removeItem("sejarahID_V2");
+            sejarahID = {};
+            janaSenaraiID();
+            document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center;'>Memori dikosongkan. Sila tarik senarai semula.</p>";
+            alert("Memori telefon telah dibersihkan. Anda boleh mula syif baharu!");
+        }
+    }
 
     // ---- FUNGSI KAWALAN TAB ----
     function bukaTab(namaTab) {
@@ -231,12 +248,14 @@
             data.forEach(item => {
                 let isSelesai = sejarahSemasa.includes(item.id_bekas);
                 let kelasSelesai = isSelesai ? "selesai" : "";
-                let teksInfo = item.jalan_blok.replace(/'/g, ""); // Buang simbol ' untuk paparan cantik
+                let teksInfo = item.jalan_blok.replace(/'/g, ""); 
                 
+                // KOD BAHARU: Tambah input kotak Catatan di dalam kad
                 html += `
                 <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
                     <h3>📦 ${item.id_bekas}</h3>
                     <p>📍 Lokasi: ${teksInfo}</p>
+                    <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
                     <div class="btn-kumpulan">
                         <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK')">BAIK</button>
                         <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH')">MUSNAH</button>
@@ -260,9 +279,12 @@
         let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         
-        // Simpan 2 rekod serentak (Kutip & Ganti)
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: "" });
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: "" });
+        // Dapatkan nota/catatan yang pegawai taip di kad tersebut
+        let catatan_kad = document.getElementById("catatan-" + id_bekas).value.toUpperCase();
+        
+        // Simpan 2 rekod serentak (Kutip & Ganti) dengan memasukkan catatan tersebut
+        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         
         // Kemas kini memori pintar telefon
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
@@ -279,8 +301,8 @@
         
         // Arahan jika spot tidak selamat
         if(status === "MUSNAH" || status === "HILANG") {
-            alert("⚠️ Status " + status + " direkodkan. Sila letak bekas gantian di spot baharu.");
-            dapatkanGPS(); // Refresh GPS
+            alert("⚠️ Status " + status + " direkodkan. Sila letak bekas gantian di spot baharu yang selamat.");
+            dapatkanGPS(); // Refresh GPS untuk spot lain di kawasan berhampiran
         }
     }
 
