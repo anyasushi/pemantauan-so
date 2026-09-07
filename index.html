@@ -187,7 +187,7 @@
     <!-- ================== TAB 2: SENARAI MANIFEST ================== -->
     <div id="tab_manifest" class="tab-content">
         
-        <label>Pilih Lokaliti (Internet Diperlukan):</label>
+        <label>Pilih Lokaliti (Internet Diperlukan untuk Tarik):</label>
         <select id="pilih_lokaliti_manifest" onchange="kemaskiniLokaliti('manifest')" required>
             <option value="">-- PILIH LOKALITI --</option>
             <option value="KG SETIA">KG SETIA</option>
@@ -246,10 +246,15 @@
         }
     }
 
+    // ---- FUNGSI RESET MEMORI DIKEMAS KINI ----
     function resetMemori() {
-        let sah = confirm("Adakah anda pasti mahu kosongkan memori tanda [SELESAI] di telefon ini? (Nota: Ini TIDAK akan memadam data yang belum di-sync)");
+        let sah = confirm("Adakah anda pasti mahu kosongkan memori telefon ini? Ini akan membuang tanda [SELESAI] dan memadam Cache Senarai Manifest (Data belum Sync TIDAK akan dipadam).");
         if (sah) {
-            localStorage.removeItem("sejarahID_V2"); sejarahID = {}; janaSenaraiID();
+            localStorage.removeItem("sejarahID_V2"); 
+            localStorage.removeItem("manifestData_V2"); // Padam cache manifest
+            localStorage.removeItem("manifestLokaliti_V2");
+            sejarahID = {}; 
+            janaSenaraiID();
             document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center;'>Memori dikosongkan. Sila tarik senarai semula.</p>";
             alert("Memori telefon telah dibersihkan. Anda boleh mula syif baharu!");
         }
@@ -262,6 +267,41 @@
         document.getElementById('btn-tab-' + namaTab).classList.add('aktif');
     }
 
+    // ---- FUNGSI RENDER MANIFEST (Diasingkan untuk Auto-Load) ----
+    function renderManifest(data, lokaliti) {
+        let ruangKad = document.getElementById("ruang_kad_manifest");
+        if(data.length === 0) {
+            ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod bekas aktif untuk lokaliti ini.</p>";
+            return;
+        }
+        let html = "";
+        let sejarahSemasa = sejarahID[lokaliti] || [];
+        
+        data.forEach(item => {
+            let isSelesai = sejarahSemasa.includes(item.id_bekas);
+            let kelasSelesai = isSelesai ? "selesai" : "";
+            let teksInfo = item.jalan_blok.replace(/'/g, ""); 
+            
+            let r_semasa = item.r_semasa || 1;
+            let next_r = r_semasa < 7 ? r_semasa + 1 : 7; 
+            
+            html += `
+            <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
+                <h3>📦 ${item.id_bekas} <span class="label-kitaran">(Semasa: R${r_semasa})</span></h3>
+                <p>📍 Lokasi: ${teksInfo}</p>
+                <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
+                <div class="btn-kumpulan">
+                    <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK', ${next_r})">BAIK</button>
+                    <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH', ${next_r})">MUSNAH</button>
+                    <button type="button" class="btn-status btn-hilang" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'HILANG', ${next_r})">HILANG</button>
+                </div>
+                <div class="selesai-teks">✅ Disimpan: GANTI (R${next_r}) Dalam Telefon</div>
+            </div>`;
+        });
+        ruangKad.innerHTML = html;
+    }
+
+    // ---- FUNGSI TARIK SENARAI DIKEMAS KINI DENGAN LOCALSTORAGE ----
     function tarikSenarai() {
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
         if(!lokaliti) { alert("Sila Pilih / Masukkan Lokaliti dahulu."); return; }
@@ -272,35 +312,12 @@
         fetch(WEB_APP_URL + "?lokaliti=" + encodeURIComponent(lokaliti))
         .then(res => res.json())
         .then(data => {
-            if(data.length === 0) {
-                ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod bekas aktif untuk lokaliti ini.</p>";
-                return;
-            }
-            let html = "";
-            let sejarahSemasa = sejarahID[lokaliti] || [];
+            // SIMPAN DATA KE CACHE TELEFON (KALIS REFRESH)
+            localStorage.setItem("manifestData_V2", JSON.stringify(data));
+            localStorage.setItem("manifestLokaliti_V2", lokaliti);
             
-            data.forEach(item => {
-                let isSelesai = sejarahSemasa.includes(item.id_bekas);
-                let kelasSelesai = isSelesai ? "selesai" : "";
-                let teksInfo = item.jalan_blok.replace(/'/g, ""); 
-                
-                let r_semasa = item.r_semasa || 1;
-                let next_r = r_semasa < 7 ? r_semasa + 1 : 7; 
-                
-                html += `
-                <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
-                    <h3>📦 ${item.id_bekas} <span class="label-kitaran">(Semasa: R${r_semasa})</span></h3>
-                    <p>📍 Lokasi: ${teksInfo}</p>
-                    <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
-                    <div class="btn-kumpulan">
-                        <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK', ${next_r})">BAIK</button>
-                        <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH', ${next_r})">MUSNAH</button>
-                        <button type="button" class="btn-status btn-hilang" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'HILANG', ${next_r})">HILANG</button>
-                    </div>
-                    <div class="selesai-teks">✅ Disimpan: GANTI (R${next_r}) Dalam Telefon</div>
-                </div>`;
-            });
-            ruangKad.innerHTML = html;
+            // Panggil fungsi lukis kad
+            renderManifest(data, lokaliti);
         })
         .catch(err => {
             ruangKad.innerHTML = "<p style='text-align:center; color:red;'>❌ Ralat memuat turun. Sila pastikan internet stabil.</p>";
@@ -358,9 +375,6 @@
         janaSenaraiID();
     }
 
-    // ==========================================
-    // FUNGSI AUTO-LOMPAT ID DIKEMAS KINI DI SINI
-    // ==========================================
     function janaSenaraiID() {
         var val = document.getElementById("jumlah_bekas").value;
         var limit = (val === "CUSTOM") ? (parseInt(document.getElementById("jumlah_custom").value) || 0) : (parseInt(val) || 0);
@@ -369,8 +383,7 @@
         
         let htmlOptions = '<option value="">-- PILIH ID --</option>'; 
         let sejarahSemasa = dapatkanSejarahLokaliti(); 
-        
-        let nextAvailableID = ""; // Menyimpan ID pertama yang belum disiapkan
+        let nextAvailableID = ""; 
 
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
@@ -378,7 +391,6 @@
                 htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; 
             } else { 
                 htmlOptions += `<option value="${namaID}">${namaID}</option>`; 
-                // Jika ini ID kosong yang pertama kita jumpa, simpan namanya
                 if (nextAvailableID === "") {
                     nextAvailableID = namaID; 
                 }
@@ -388,11 +400,12 @@
         selectID.innerHTML = htmlOptions; 
         selectAkhir.innerHTML = htmlOptions;
         
-        // Pilih ID seterusnya secara automatik!
         if (nextAvailableID !== "") {
             selectID.value = nextAvailableID;
+            selectAkhir.value = nextAvailableID;
         } else {
             selectID.value = "";
+            selectAkhir.value = "";
         }
     }
 
@@ -436,7 +449,39 @@
             );
         }
     }
-    window.onload = function() { dapatkanGPS(); janaSenaraiID(); };
+
+    // =========================================================
+    // FUNGSI AUTO-LOAD (MEMUAT SEMULA) MANIFEST KETIKA REFRESH
+    // =========================================================
+    window.onload = function() { 
+        dapatkanGPS(); 
+        janaSenaraiID(); 
+        
+        let savedManifest = localStorage.getItem("manifestData_V2");
+        let savedLokaliti = localStorage.getItem("manifestLokaliti_V2");
+        
+        // Jika terdapat memori cache manifest dari sesi sebelumnya
+        if (savedManifest && savedLokaliti) {
+            let data = JSON.parse(savedManifest);
+            let selectManifest = document.getElementById("pilih_lokaliti_manifest");
+            let inputManifest = document.getElementById("lokaliti_manifest");
+            
+            // Selaraskan Dropdown ke lokasi yang tersimpan
+            let optionExists = Array.from(selectManifest.options).some(opt => opt.value === savedLokaliti);
+            if (optionExists) {
+                selectManifest.value = savedLokaliti;
+                inputManifest.classList.add("hidden");
+                inputManifest.value = savedLokaliti;
+            } else {
+                selectManifest.value = "LAIN";
+                inputManifest.classList.remove("hidden");
+                inputManifest.value = savedLokaliti;
+            }
+            
+            // Lukis semula kad tanpa perlukan internet
+            renderManifest(data, savedLokaliti);
+        }
+    };
 
     function mulaImbas(targetInput) {
         sasaranQR = targetInput; document.getElementById('reader').style.display = "block"; document.getElementById('btnTutupKamera').style.display = "block";
@@ -532,10 +577,7 @@
         document.getElementById("catatan").value = ""; document.getElementById("amaran_id_utama").style.display = "none";
         
         if(tindakan_asal === "Kutip") { urusTindakan(); } 
-        
-        // Panggil semula janaSenarai supaya ia membuang ID tadi dan memilih ID seterusnya!
-        janaSenaraiID(); 
-        kiraRekod();
+        janaSenaraiID(); kiraRekod();
     }
 
     function kiraRekod() {
