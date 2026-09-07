@@ -52,6 +52,7 @@
         .selesai .selesai-teks { display: block; }
         .selesai .btn-kumpulan, .selesai .input-catatan-kad { display: none; }
         .btn-tarik { width: 100%; background: #6f42c1; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; margin-bottom: 15px; cursor: pointer; margin-top: 0; }
+        .label-kitaran { font-size: 0.8em; color: #007bff; font-weight: bold; background: #e3f2fd; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -108,9 +109,23 @@
         <label>Tindakan:</label>
         <select id="tindakan" onchange="urusTindakan()">
             <option value="">-- Pilih Tindakan --</option>
-            <option value="Pasang">Pasang (R1/Bekas Baharu)</option>
+            <option value="Pasang">Pasang (Bekas Baharu)</option>
             <option value="Kutip">Kutip & Ganti</option>
         </select>
+
+        <!-- KOD BAHARU: Pemilihan Kitaran Manual -->
+        <div id="ruang_kitaran">
+            <label style="color:#007bff;">Tahap Kitaran Bekas (R):</label>
+            <select id="kitaran_bekas">
+                <option value="R1">R1 (Pemasangan Pertama)</option>
+                <option value="R2">R2 (Gantian Pertama)</option>
+                <option value="R3">R3</option>
+                <option value="R4">R4</option>
+                <option value="R5">R5</option>
+                <option value="R6">R6</option>
+                <option value="R7">R7</option>
+            </select>
+        </div>
 
         <div class="mod-pukal-box">
             <label style="margin-top:0; cursor:pointer;">
@@ -173,7 +188,7 @@
         <label>Pilih Lokaliti (Internet Diperlukan):</label>
         <input list="senarai-lokaliti" id="lokaliti_manifest" placeholder="CONTOH: KG SETIA">
         
-        <button type="button" class="btn-tarik" onclick="tarikSenarai()">⬇️ Tarik Senarai Pemasangan (R1)</button>
+        <button type="button" class="btn-tarik" onclick="tarikSenarai()">⬇️ Tarik Senarai Bekas (R)</button>
         
         <div id="ruang_kad_manifest">
             <p style="text-align: center; font-size: 0.9em; color: #777;">Sila tarik senarai sebelum ke lapangan.</p>
@@ -189,8 +204,6 @@
             <button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 Refresh</button>
         </div>
         <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
-        
-        <!-- BUTANG RESET MEMORI UNTUK TESTING & SYIF BAHARU -->
         <button type="button" class="btn-reset" onclick="resetMemori()">🧹 Kosongkan Memori [SELESAI]</button>
     </div>
 
@@ -210,9 +223,7 @@
     function resetMemori() {
         let sah = confirm("Adakah anda pasti mahu kosongkan memori tanda [SELESAI] di telefon ini? (Nota: Ini TIDAK akan memadam data yang belum di-sync)");
         if (sah) {
-            localStorage.removeItem("sejarahID_V2");
-            sejarahID = {};
-            janaSenaraiID();
+            localStorage.removeItem("sejarahID_V2"); sejarahID = {}; janaSenaraiID();
             document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center;'>Memori dikosongkan. Sila tarik senarai semula.</p>";
             alert("Memori telefon telah dibersihkan. Anda boleh mula syif baharu!");
         }
@@ -222,24 +233,23 @@
     function bukaTab(namaTab) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('aktif'));
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('aktif'));
-        
         document.getElementById('tab_' + namaTab).classList.add('aktif');
         document.getElementById('btn-tab-' + namaTab).classList.add('aktif');
     }
 
-    // ---- FUNGSI KAD MANIFEST (TAB 2) ----
+    // ---- FUNGSI KAD MANIFEST (PINTAR R1-R7) ----
     function tarikSenarai() {
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
         if(!lokaliti) { alert("Sila masukkan Lokaliti dahulu."); return; }
         
         let ruangKad = document.getElementById("ruang_kad_manifest");
-        ruangKad.innerHTML = "<p style='text-align:center;'>Sedang memuat turun data dari server. Sila tunggu...</p>";
+        ruangKad.innerHTML = "<p style='text-align:center;'>Sedang memuat turun dan mengira tahap kitaran (R)...</p>";
         
         fetch(WEB_APP_URL + "?lokaliti=" + encodeURIComponent(lokaliti))
         .then(res => res.json())
         .then(data => {
             if(data.length === 0) {
-                ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod pemasangan aktif untuk lokaliti ini.</p>";
+                ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod bekas aktif untuk lokaliti ini.</p>";
                 return;
             }
             let html = "";
@@ -250,18 +260,22 @@
                 let kelasSelesai = isSelesai ? "selesai" : "";
                 let teksInfo = item.jalan_blok.replace(/'/g, ""); 
                 
-                // KOD BAHARU: Tambah input kotak Catatan di dalam kad
+                // KIRAAN PINTAR: Dapatkan R semasa, dan sediakan R untuk gantian seterusnya
+                let r_semasa = item.r_semasa || 1;
+                let next_r = r_semasa < 7 ? r_semasa + 1 : 7; // Hadkan ke R7
+                
                 html += `
                 <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
-                    <h3>📦 ${item.id_bekas}</h3>
+                    <h3>📦 ${item.id_bekas} <span class="label-kitaran">(Semasa: R${r_semasa})</span></h3>
                     <p>📍 Lokasi: ${teksInfo}</p>
                     <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
                     <div class="btn-kumpulan">
-                        <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK')">BAIK</button>
-                        <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH')">MUSNAH</button>
-                        <button type="button" class="btn-status btn-hilang" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'HILANG')">HILANG</button>
+                        <!-- Hantar next_r (Tahap R seterusnya) apabila butang ditekan -->
+                        <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK', ${next_r})">BAIK</button>
+                        <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH', ${next_r})">MUSNAH</button>
+                        <button type="button" class="btn-status btn-hilang" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'HILANG', ${next_r})">HILANG</button>
                     </div>
-                    <div class="selesai-teks">✅ Disimpan (Kutip & Ganti) Dalam Telefon</div>
+                    <div class="selesai-teks">✅ Disimpan: GANTI (R${next_r}) Dalam Telefon</div>
                 </div>`;
             });
             ruangKad.innerHTML = html;
@@ -271,47 +285,42 @@
         });
     }
 
-    function prosesKad(id_bekas, jalan_blok_asal, status) {
+    function prosesKad(id_bekas, jalan_blok_asal, status, next_r) {
         if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
         
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
         let tarikh = new Date().toLocaleDateString('en-GB');
         let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        
-        // Dapatkan nota/catatan yang pegawai taip di kad tersebut
         let catatan_kad = document.getElementById("catatan-" + id_bekas).value.toUpperCase();
         
-        // Simpan 2 rekod serentak (Kutip & Ganti) dengan memasukkan catatan tersebut
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        let labelGanti = "GANTI (R" + next_r + ")"; // Contoh: GANTI (R2)
         
-        // Kemas kini memori pintar telefon
+        // Simpan 2 rekod (Kutip biasa, dan Ganti dengan R yang telah ditambah)
+        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: labelGanti, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
         if (!sejarahID[lokaliti].includes(id_bekas)) sejarahID[lokaliti].push(id_bekas);
         localStorage.setItem("sejarahID_V2", JSON.stringify(sejarahID));
-        
         localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
         kiraRekod();
         
-        // Tukar kad jadi kelabu (Selesai)
         let kad = document.getElementById("kad-" + id_bekas);
         kad.classList.add("selesai");
-        kad.querySelector(".selesai-teks").innerText = `✅ Disimpan: Status ${status}`;
+        kad.querySelector(".selesai-teks").innerText = `✅ Disimpan: Status ${status} -> ${labelGanti}`;
         
-        // Arahan jika spot tidak selamat
         if(status === "MUSNAH" || status === "HILANG") {
             alert("⚠️ Status " + status + " direkodkan. Sila letak bekas gantian di spot baharu yang selamat.");
-            dapatkanGPS(); // Refresh GPS untuk spot lain di kawasan berhampiran
+            dapatkanGPS(); 
         }
     }
 
-    // ---- FUNGSI BORANG MANUAL (TAB 1) KEKAL SAMA ----
+    // ---- FUNGSI BORANG MANUAL (TAB 1) ----
     function urusJenisPremis() {
         let jenis = document.getElementById("jenis_premis").value;
         let divStrata = document.getElementById("ruang_strata");
         let divLanded = document.getElementById("ruang_landed");
-        
         if (jenis === "STRATA") { divStrata.classList.remove("hidden"); divLanded.classList.add("hidden"); } 
         else if (jenis === "LANDED") { divLanded.classList.remove("hidden"); divStrata.classList.add("hidden"); } 
         else { divStrata.classList.add("hidden"); divLanded.classList.add("hidden"); }
@@ -319,33 +328,28 @@
 
     function dapatkanSejarahLokaliti() {
         let lokaliti = document.getElementById("lokaliti").value.toUpperCase();
-        if (!lokaliti) return [];
-        return sejarahID[lokaliti] || [];
+        if (!lokaliti) return []; return sejarahID[lokaliti] || [];
     }
 
     function urusJumlahBekas() {
         var val = document.getElementById("jumlah_bekas").value;
         var customInput = document.getElementById("jumlah_custom");
-        if (val === "CUSTOM") { customInput.classList.remove("hidden"); } 
-        else { customInput.classList.add("hidden"); customInput.value = ""; }
+        if (val === "CUSTOM") { customInput.classList.remove("hidden"); } else { customInput.classList.add("hidden"); customInput.value = ""; }
         janaSenaraiID();
     }
 
     function janaSenaraiID() {
         var val = document.getElementById("jumlah_bekas").value;
         var limit = (val === "CUSTOM") ? (parseInt(document.getElementById("jumlah_custom").value) || 0) : (parseInt(val) || 0);
-        let selectID = document.getElementById("id_bekas");
-        let selectAkhir = document.getElementById("id_bekas_akhir");
-        let htmlOptions = '<option value="">-- PILIH ID --</option>';
-        let sejarahSemasa = dapatkanSejarahLokaliti(); 
+        let selectID = document.getElementById("id_bekas"); let selectAkhir = document.getElementById("id_bekas_akhir");
+        let htmlOptions = '<option value="">-- PILIH ID --</option>'; let sejarahSemasa = dapatkanSejarahLokaliti(); 
 
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
             if (sejarahSemasa.includes(namaID)) { htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; } 
             else { htmlOptions += `<option value="${namaID}">${namaID}</option>`; }
         }
-        let currentID = selectID.value;
-        selectID.innerHTML = htmlOptions; selectAkhir.innerHTML = htmlOptions;
+        let currentID = selectID.value; selectID.innerHTML = htmlOptions; selectAkhir.innerHTML = htmlOptions;
         if(currentID) selectID.value = currentID;
     }
 
@@ -356,38 +360,24 @@
     }
 
     function semakID(elemenInput, idAmaran) {
-        var amaran = document.getElementById(idAmaran);
-        let sejarahSemasa = dapatkanSejarahLokaliti();
-        if (sejarahSemasa.includes(elemenInput.value.toUpperCase())) amaran.style.display = "block";
-        else amaran.style.display = "none";
+        var amaran = document.getElementById(idAmaran); let sejarahSemasa = dapatkanSejarahLokaliti();
+        if (sejarahSemasa.includes(elemenInput.value.toUpperCase())) amaran.style.display = "block"; else amaran.style.display = "none";
     }
 
     function urusTindakan() {
         var tindakan = document.getElementById("tindakan").value;
         var ruangKutip = document.getElementById("ruangKutip");
         if (tindakan === "Kutip") { ruangKutip.classList.remove("hidden"); } 
-        else {
-            ruangKutip.classList.add("hidden");
-            document.getElementById("status").value = "N/A";
-            document.getElementById("ganti_bekas").value = "TIDAK";
-            document.getElementById("divGanti").classList.add("hidden");
-        }
+        else { ruangKutip.classList.add("hidden"); document.getElementById("status").value = "N/A"; document.getElementById("ganti_bekas").value = "TIDAK"; document.getElementById("divGanti").classList.add("hidden"); }
     }
 
     function urusStatus() {
-        if (document.getElementById("status").value !== "N/A") {
-            document.getElementById("divGanti").classList.remove("hidden");
-            document.getElementById("ganti_bekas").value = "YA"; 
-            urusGanti(); 
-        }
+        if (document.getElementById("status").value !== "N/A") { document.getElementById("divGanti").classList.remove("hidden"); document.getElementById("ganti_bekas").value = "YA"; urusGanti(); }
     }
 
     function urusGanti() {
-        var ganti = document.getElementById("ganti_bekas").value;
-        var status = document.getElementById("status").value;
-        if (ganti === "YA") {
-            if (status === "MUSNAH" || status === "HILANG") { alert("⚠️ AMARAN: Spot ini tidak selamat. Sila letak bekas baharu di spot lain."); }
-        }
+        var ganti = document.getElementById("ganti_bekas").value; var status = document.getElementById("status").value;
+        if (ganti === "YA") { if (status === "MUSNAH" || status === "HILANG") { alert("⚠️ AMARAN: Spot ini tidak selamat. Sila letak bekas baharu di spot lain."); } }
     }
 
     function dapatkanGPS() {
@@ -395,8 +385,7 @@
             document.getElementById("gps_status").innerText = "Mencari koordinat...";
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    latSemasa = position.coords.latitude;
-                    lngSemasa = position.coords.longitude;
+                    latSemasa = position.coords.latitude; lngSemasa = position.coords.longitude;
                     document.getElementById("gps_status").innerText = "✅ Berjaya (" + latSemasa.toFixed(5) + ")";
                 },
                 function(error) { document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon"; },
@@ -407,42 +396,34 @@
     window.onload = function() { dapatkanGPS(); janaSenaraiID(); };
 
     function mulaImbas(targetInput) {
-        sasaranQR = targetInput; 
-        document.getElementById('reader').style.display = "block";
-        document.getElementById('btnTutupKamera').style.display = "block";
+        sasaranQR = targetInput; document.getElementById('reader').style.display = "block"; document.getElementById('btnTutupKamera').style.display = "block";
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
             { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
             (decodedText) => {
                 var inputTarget = document.getElementById(sasaranQR);
                 let optionExists = Array.from(inputTarget.options).some(opt => opt.value === decodedText);
-                if (!optionExists) {
-                    let newOpt = document.createElement("option");
-                    newOpt.value = decodedText; newOpt.text = decodedText; inputTarget.appendChild(newOpt);
-                }
+                if (!optionExists) { let newOpt = document.createElement("option"); newOpt.value = decodedText; newOpt.text = decodedText; inputTarget.appendChild(newOpt); }
                 inputTarget.value = decodedText;
                 if(sasaranQR === "id_bekas") semakID(document.getElementById(sasaranQR), "amaran_id_utama");
-                hentiImbas();
-                if (navigator.vibrate) navigator.vibrate(200);
+                hentiImbas(); if (navigator.vibrate) navigator.vibrate(200);
             }, (err) => {}
         ).catch((err) => alert("Ralat kamera: " + err));
     }
 
     function hentiImbas() {
-        if (html5QrCode) html5QrCode.stop().then(() => {
-            document.getElementById('reader').style.display = "none"; document.getElementById('btnTutupKamera').style.display = "none";
-        }).catch(err => console.log(err));
+        if (html5QrCode) html5QrCode.stop().then(() => { document.getElementById('reader').style.display = "none"; document.getElementById('btnTutupKamera').style.display = "none"; }).catch(err => console.log(err));
     }
 
     function ekstrakID(idStr) {
-        let match = idStr.match(/^([^0-9]*)([0-9]+)$/);
-        if (!match) return null;
+        let match = idStr.match(/^([^0-9]*)([0-9]+)$/); if (!match) return null;
         return { prefix: match[1], num: parseInt(match[2]), padLength: match[2].length };
     }
 
     function simpanData() {
         if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
         let tindakan_asal = document.getElementById("tindakan").value;
+        let kitaran = document.getElementById("kitaran_bekas").value; // Ambil nilai kitaran R manual
         let ganti = document.getElementById("ganti_bekas").value;
         let lokaliti_asal = document.getElementById("lokaliti").value;
         let id_mula = document.getElementById("id_bekas").value.toUpperCase();
@@ -457,29 +438,24 @@
             let id_akhir = document.getElementById("id_bekas_akhir").value.toUpperCase();
             if(!id_akhir) { alert("Sila masukkan ID Akhir untuk Mod Pukal."); return; }
             let dataMula = ekstrakID(id_mula); let dataAkhir = ekstrakID(id_akhir);
-            if (!dataMula || !dataAkhir || dataMula.prefix !== dataAkhir.prefix || dataMula.num > dataAkhir.num) { alert("Ralat Format Pukal: Pastikan ID Mula & Akhir mempunyai format yang sama."); return; }
+            if (!dataMula || !dataAkhir || dataMula.prefix !== dataAkhir.prefix || dataMula.num > dataAkhir.num) { alert("Ralat Format Pukal."); return; }
             for (let i = dataMula.num; i <= dataAkhir.num; i++) { senaraiID.push(dataMula.prefix + String(i).padStart(dataMula.padLength, '0')); }
         } else { senaraiID.push(id_mula); }
 
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
         let idTindih = senaraiID.filter(id => sejarahID[lokaliti].includes(id));
         if (idTindih.length > 0) {
-            let teruskan = confirm("⚠️ Terdapat ID yang telah direkodkan di lokaliti ini:\n" + idTindih.join(", ") + "\n\nTeruskan simpan untuk memperbetulkan rekod ini?");
+            let teruskan = confirm("⚠️ Terdapat ID yang telah direkodkan di lokaliti ini. Teruskan simpan?");
             if (!teruskan) return;
         }
 
-        let jenis_premis = document.getElementById("jenis_premis").value;
-        let jalan_blok_raw = "";
-        
+        let jenis_premis = document.getElementById("jenis_premis").value; let jalan_blok_raw = "";
         if (jenis_premis === "STRATA") {
             let b = document.getElementById("strata_blok").value.toUpperCase(); let t = document.getElementById("strata_tingkat").value.toUpperCase();
             if (b && t) jalan_blok_raw = "BLOK " + b + " TINGKAT " + t; else if (b) jalan_blok_raw = "BLOK " + b; else if (t) jalan_blok_raw = "TINGKAT " + t;
-        } else if (jenis_premis === "LANDED") {
-            let j = document.getElementById("landed_jalan").value.toUpperCase(); if (j) jalan_blok_raw = j;
-        }
+        } else if (jenis_premis === "LANDED") { let j = document.getElementById("landed_jalan").value.toUpperCase(); if (j) jalan_blok_raw = j; }
 
         let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : "";
-        let tindakan = tindakan_asal.toUpperCase();
         let status = document.getElementById("status").value.toUpperCase();
         let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
         let tarikh = new Date().toLocaleDateString('en-GB');
@@ -490,12 +466,14 @@
 
         senaraiID.forEach((id_semasa) => {
             if (tindakan_asal === "Pasang") {
-                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                // Cantumkan perkataan PASANG dan R manual
+                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "PASANG (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             } 
             else if (tindakan_asal === "Kutip") {
-                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan, status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 if (ganti === "YA") {
-                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                    // Cantumkan perkataan GANTI dan R manual
+                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 }
             }
             if (!sejarahID[lokaliti].includes(id_semasa)) sejarahID[lokaliti].push(id_semasa);
@@ -509,46 +487,31 @@
         if(isPukal) { document.getElementById("label_last_id").innerText = "Rekod Terakhir (Pukal): " + senaraiID[0] + " - " + rekodAkhirID; } 
         else { document.getElementById("label_last_id").innerText = "Rekod Terakhir: " + rekodAkhirID; }
         
-        document.getElementById("id_bekas").value = ""; 
-        document.getElementById("id_bekas_akhir").value = ""; 
-        document.getElementById("catatan").value = ""; 
-        document.getElementById("amaran_id_utama").style.display = "none";
+        document.getElementById("id_bekas").value = ""; document.getElementById("id_bekas_akhir").value = ""; 
+        document.getElementById("catatan").value = ""; document.getElementById("amaran_id_utama").style.display = "none";
         
-        if(tindakan_asal === "Kutip") { urusTindakan(); }
-        janaSenaraiID(); 
-        kiraRekod();
+        if(tindakan_asal === "Kutip") { urusTindakan(); } janaSenaraiID(); kiraRekod();
     }
 
     function kiraRekod() {
-        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        document.getElementById("rekod_count").innerText = senaraiRekod.length;
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || []; document.getElementById("rekod_count").innerText = senaraiRekod.length;
     }
     kiraRekod();
 
     function syncData() {
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         if (senaraiRekod.length === 0) { alert("Tiada data baharu untuk di-sync."); return; }
-
         document.querySelector(".sync").innerText = "Sedang Sync (Mohon Tunggu)...";
 
-        fetch(WEB_APP_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(senaraiRekod), 
-        })
+        fetch(WEB_APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(senaraiRekod), })
         .then(response => response.json())
         .then(data => {
             if(data.status === "success") {
-                localStorage.setItem("dataSO", JSON.stringify([]));
-                kiraRekod();
-                document.querySelector(".sync").innerText = "Sync ke Server ☁️";
-                alert("Semua data berjaya masuk ke Google Sheets mengikut urutan!");
+                localStorage.setItem("dataSO", JSON.stringify([])); kiraRekod(); document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Semua data berjaya masuk ke Google Sheets!");
             } else { throw new Error(data.message); }
         })
         .catch(error => {
-            console.error('Error:', error);
-            document.querySelector(".sync").innerText = "Sync ke Server ☁️";
-            alert("Ralat! Pastikan internet anda stabil.");
+            console.error('Error:', error); document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Ralat! Pastikan internet anda stabil.");
         });
     }
 </script>
