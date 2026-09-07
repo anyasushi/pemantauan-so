@@ -70,12 +70,14 @@
     <div id="tab_manual" class="tab-content aktif">
         
         <label>Lokaliti:</label>
-        <input list="senarai-lokaliti" id="lokaliti" placeholder="PILIH ATAU TAIP BAHARU..." oninput="janaSenaraiID()" required>
-        <datalist id="senarai-lokaliti">
-            <option value="KG SETIA">
-            <option value="TAMAN MAJU">
-            <option value="DESA AMAN">
-        </datalist>
+        <select id="pilih_lokaliti_manual" onchange="kemaskiniLokaliti('manual')" required>
+            <option value="">-- PILIH LOKALITI --</option>
+            <option value="KG SETIA">KG SETIA</option>
+            <option value="TAMAN MAJU">TAMAN MAJU</option>
+            <option value="DESA AMAN">DESA AMAN</option>
+            <option value="LAIN">➕ TAIP LOKALITI BAHARU...</option>
+        </select>
+        <input type="text" id="lokaliti" class="hidden" placeholder="TAIP NAMA LOKALITI..." oninput="janaSenaraiID()">
 
         <label>Jenis Kediaman:</label>
         <select id="jenis_premis" onchange="urusJenisPremis()">
@@ -113,7 +115,6 @@
             <option value="Kutip">Kutip & Ganti</option>
         </select>
 
-        <!-- KOD BAHARU: Pemilihan Kitaran Manual -->
         <div id="ruang_kitaran">
             <label style="color:#007bff;">Tahap Kitaran Bekas (R):</label>
             <select id="kitaran_bekas">
@@ -185,8 +186,16 @@
 
     <!-- ================== TAB 2: SENARAI MANIFEST ================== -->
     <div id="tab_manifest" class="tab-content">
+        
         <label>Pilih Lokaliti (Internet Diperlukan):</label>
-        <input list="senarai-lokaliti" id="lokaliti_manifest" placeholder="CONTOH: KG SETIA">
+        <select id="pilih_lokaliti_manifest" onchange="kemaskiniLokaliti('manifest')" required>
+            <option value="">-- PILIH LOKALITI --</option>
+            <option value="KG SETIA">KG SETIA</option>
+            <option value="TAMAN MAJU">TAMAN MAJU</option>
+            <option value="DESA AMAN">DESA AMAN</option>
+            <option value="LAIN">➕ TAIP LOKALITI BAHARU...</option>
+        </select>
+        <input type="text" id="lokaliti_manifest" class="hidden" placeholder="TAIP NAMA LOKALITI...">
         
         <button type="button" class="btn-tarik" onclick="tarikSenarai()">⬇️ Tarik Senarai Bekas (R)</button>
         
@@ -219,7 +228,24 @@
     let sasaranQR = ""; 
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
 
-    // ---- FUNGSI RESET MEMORI ----
+    function kemaskiniLokaliti(tab) {
+        let selectElem = (tab === 'manual') ? document.getElementById("pilih_lokaliti_manual") : document.getElementById("pilih_lokaliti_manifest");
+        let inputElem = (tab === 'manual') ? document.getElementById("lokaliti") : document.getElementById("lokaliti_manifest");
+
+        if (selectElem.value === "LAIN") {
+            inputElem.classList.remove("hidden");
+            inputElem.value = "";
+            inputElem.focus(); 
+        } else {
+            inputElem.classList.add("hidden");
+            inputElem.value = selectElem.value;
+        }
+
+        if (tab === 'manual') {
+            janaSenaraiID();
+        }
+    }
+
     function resetMemori() {
         let sah = confirm("Adakah anda pasti mahu kosongkan memori tanda [SELESAI] di telefon ini? (Nota: Ini TIDAK akan memadam data yang belum di-sync)");
         if (sah) {
@@ -229,7 +255,6 @@
         }
     }
 
-    // ---- FUNGSI KAWALAN TAB ----
     function bukaTab(namaTab) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('aktif'));
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('aktif'));
@@ -237,10 +262,9 @@
         document.getElementById('btn-tab-' + namaTab).classList.add('aktif');
     }
 
-    // ---- FUNGSI KAD MANIFEST (PINTAR R1-R7) ----
     function tarikSenarai() {
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
-        if(!lokaliti) { alert("Sila masukkan Lokaliti dahulu."); return; }
+        if(!lokaliti) { alert("Sila Pilih / Masukkan Lokaliti dahulu."); return; }
         
         let ruangKad = document.getElementById("ruang_kad_manifest");
         ruangKad.innerHTML = "<p style='text-align:center;'>Sedang memuat turun dan mengira tahap kitaran (R)...</p>";
@@ -260,9 +284,8 @@
                 let kelasSelesai = isSelesai ? "selesai" : "";
                 let teksInfo = item.jalan_blok.replace(/'/g, ""); 
                 
-                // KIRAAN PINTAR: Dapatkan R semasa, dan sediakan R untuk gantian seterusnya
                 let r_semasa = item.r_semasa || 1;
-                let next_r = r_semasa < 7 ? r_semasa + 1 : 7; // Hadkan ke R7
+                let next_r = r_semasa < 7 ? r_semasa + 1 : 7; 
                 
                 html += `
                 <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
@@ -270,7 +293,6 @@
                     <p>📍 Lokasi: ${teksInfo}</p>
                     <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
                     <div class="btn-kumpulan">
-                        <!-- Hantar next_r (Tahap R seterusnya) apabila butang ditekan -->
                         <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK', ${next_r})">BAIK</button>
                         <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH', ${next_r})">MUSNAH</button>
                         <button type="button" class="btn-status btn-hilang" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'HILANG', ${next_r})">HILANG</button>
@@ -294,9 +316,8 @@
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         let catatan_kad = document.getElementById("catatan-" + id_bekas).value.toUpperCase();
         
-        let labelGanti = "GANTI (R" + next_r + ")"; // Contoh: GANTI (R2)
+        let labelGanti = "GANTI (R" + next_r + ")"; 
         
-        // Simpan 2 rekod (Kutip biasa, dan Ganti dengan R yang telah ditambah)
         senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: labelGanti, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         
@@ -316,7 +337,6 @@
         }
     }
 
-    // ---- FUNGSI BORANG MANUAL (TAB 1) ----
     function urusJenisPremis() {
         let jenis = document.getElementById("jenis_premis").value;
         let divStrata = document.getElementById("ruang_strata");
@@ -338,19 +358,42 @@
         janaSenaraiID();
     }
 
+    // ==========================================
+    // FUNGSI AUTO-LOMPAT ID DIKEMAS KINI DI SINI
+    // ==========================================
     function janaSenaraiID() {
         var val = document.getElementById("jumlah_bekas").value;
         var limit = (val === "CUSTOM") ? (parseInt(document.getElementById("jumlah_custom").value) || 0) : (parseInt(val) || 0);
-        let selectID = document.getElementById("id_bekas"); let selectAkhir = document.getElementById("id_bekas_akhir");
-        let htmlOptions = '<option value="">-- PILIH ID --</option>'; let sejarahSemasa = dapatkanSejarahLokaliti(); 
+        let selectID = document.getElementById("id_bekas"); 
+        let selectAkhir = document.getElementById("id_bekas_akhir");
+        
+        let htmlOptions = '<option value="">-- PILIH ID --</option>'; 
+        let sejarahSemasa = dapatkanSejarahLokaliti(); 
+        
+        let nextAvailableID = ""; // Menyimpan ID pertama yang belum disiapkan
 
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
-            if (sejarahSemasa.includes(namaID)) { htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; } 
-            else { htmlOptions += `<option value="${namaID}">${namaID}</option>`; }
+            if (sejarahSemasa.includes(namaID)) { 
+                htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; 
+            } else { 
+                htmlOptions += `<option value="${namaID}">${namaID}</option>`; 
+                // Jika ini ID kosong yang pertama kita jumpa, simpan namanya
+                if (nextAvailableID === "") {
+                    nextAvailableID = namaID; 
+                }
+            }
         }
-        let currentID = selectID.value; selectID.innerHTML = htmlOptions; selectAkhir.innerHTML = htmlOptions;
-        if(currentID) selectID.value = currentID;
+        
+        selectID.innerHTML = htmlOptions; 
+        selectAkhir.innerHTML = htmlOptions;
+        
+        // Pilih ID seterusnya secara automatik!
+        if (nextAvailableID !== "") {
+            selectID.value = nextAvailableID;
+        } else {
+            selectID.value = "";
+        }
     }
 
     function urusPukal() {
@@ -423,7 +466,7 @@
     function simpanData() {
         if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
         let tindakan_asal = document.getElementById("tindakan").value;
-        let kitaran = document.getElementById("kitaran_bekas").value; // Ambil nilai kitaran R manual
+        let kitaran = document.getElementById("kitaran_bekas").value; 
         let ganti = document.getElementById("ganti_bekas").value;
         let lokaliti_asal = document.getElementById("lokaliti").value;
         let id_mula = document.getElementById("id_bekas").value.toUpperCase();
@@ -466,13 +509,11 @@
 
         senaraiID.forEach((id_semasa) => {
             if (tindakan_asal === "Pasang") {
-                // Cantumkan perkataan PASANG dan R manual
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "PASANG (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             } 
             else if (tindakan_asal === "Kutip") {
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 if (ganti === "YA") {
-                    // Cantumkan perkataan GANTI dan R manual
                     senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 }
             }
@@ -490,7 +531,11 @@
         document.getElementById("id_bekas").value = ""; document.getElementById("id_bekas_akhir").value = ""; 
         document.getElementById("catatan").value = ""; document.getElementById("amaran_id_utama").style.display = "none";
         
-        if(tindakan_asal === "Kutip") { urusTindakan(); } janaSenaraiID(); kiraRekod();
+        if(tindakan_asal === "Kutip") { urusTindakan(); } 
+        
+        // Panggil semula janaSenarai supaya ia membuang ID tadi dan memilih ID seterusnya!
+        janaSenaraiID(); 
+        kiraRekod();
     }
 
     function kiraRekod() {
