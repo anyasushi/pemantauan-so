@@ -6,7 +6,7 @@
     <title>Sistem SO Pintar</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; padding-bottom: 80px; } /* Tambah padding bawah untuk butang sticky */
         .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { font-weight: bold; margin-top: 10px; display: block; }
@@ -16,7 +16,31 @@
         button.sync { background-color: #007bff; }
         button.kamera { background-color: #17a2b8; margin-top: 0; width: 35%; }
         button.tutup-kamera { background-color: #dc3545; display: none; }
-        button.btn-refresh { background-color: #6c757d; color: white; border: none; padding: 5px 10px; margin-top: 0; width: auto; font-size: 0.8em; border-radius: 5px; cursor: pointer; }
+        
+        /* FIX ISU 2: GAYA BAHARU BUTANG REFRESH STICKY ( terapung ) */
+        button.btn-refresh { 
+            background-color: rgb(23, 162, 184, 0.9); /* Lutsinar */
+            color: white; 
+            border: none; 
+            padding: 15px; /* Lebih besar */
+            width: auto; 
+            font-size: 1em; 
+            font-weight: bold; 
+            border-radius: 50px; /* Bulat */
+            cursor: pointer; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            
+            /* KUNCI DI BAWAH KANAN SKRIN */
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            
+            transition: background-color 0.3s;
+            margin-top: 0;
+        }
+        button.btn-refresh:active { background-color: #117a8b; }
+
         button.btn-reset { background-color: #dc3545; color: white; border: none; padding: 5px 10px; margin-top: 10px; width: 100%; font-size: 0.85em; border-radius: 5px; cursor: pointer; }
         .hidden { display: none; }
         .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; border: 1px solid #ddd; }
@@ -187,6 +211,11 @@
     <!-- ================== TAB 2: SENARAI MANIFEST ================== -->
     <div id="tab_manifest" class="tab-content">
         
+        <!-- FIX ISU 1: TAMBAH CARIAN (Sticky Top) -->
+        <div style="padding: 10px; background: #e3f2fd; border-bottom: 2px solid #90caf9; position: sticky; top: 0; z-index: 100; margin-bottom:10px;">
+            <input type="text" id="cari_id_so" placeholder="🔍 Cari ID SO... (Contoh: 005)" onkeyup="tapisCarianSO()" style="border: 2px solid #007bff; padding: 12px; font-weight:bold; margin-top:0;">
+        </div>
+
         <label>Pilih Lokaliti (Internet Diperlukan untuk Tarik):</label>
         <select id="pilih_lokaliti_manifest" onchange="kemaskiniLokaliti('manifest')" required>
             <option value="">-- PILIH LOKALITI --</option>
@@ -205,18 +234,21 @@
     </div> <!-- END TAB 2 -->
 
 
-    <!-- STATUS BAWAH (Kongsi untuk semua tab) -->
+    <!-- STATUS BAWAH -->
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
     <div class="status-box">
         <div class="flex-row" style="margin-bottom: 5px;">
             <div><strong>Status GPS:</strong> <span id="gps_status">Menunggu...</span></div>
-            <button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 Refresh</button>
+            <!-- REMOVED: Butang refresh lama di sini dibuang -->
         </div>
         <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
         <button type="button" class="btn-reset" onclick="resetMemori()">🧹 Kosongkan Memori [SELESAI]</button>
     </div>
 
 </div>
+
+<!-- FIX ISU 2: BUTANG REFRESH TERAPUNG ( ISSUE 2 FIXED ) -->
+<button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 GPS</button>
 
 <script>
     // MASUKKAN URL APPS SCRIPT ANDA DI SINI
@@ -227,6 +259,30 @@
     let html5QrCode;
     let sasaranQR = ""; 
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
+
+    // ---- FIX ISU 1: FUNGSI TAPISAN CARIAN SO ----
+    function tapisCarianSO() {
+        let input = document.getElementById('cari_id_so').value.toUpperCase();
+        let ruangKad = document.getElementById('ruang_kad_manifest');
+        let kads = ruangKad.getElementsByClassName('kad-bekas');
+
+        for (let i = 0; i < kads.length; i++) {
+            // Kita cari dalam elemen h3 (yang mengandungi ID SO)
+            let title = kads[i].getElementsByTagName('h3')[0];
+            if (title) {
+                let txtValue = title.textContent || title.innerText;
+                // txtValue format: "📦 SO-005 (Semasa: R1)"
+                // Kita cuma nak check bahagian "SO-005"
+                let idPart = txtValue.split('(')[0];
+
+                if (idPart.toUpperCase().indexOf(input) > -1) {
+                    kads[i].style.display = "";
+                } else {
+                    kads[i].style.display = "none";
+                }
+            }
+        }
+    }
 
     function kemaskiniLokaliti(tab) {
         let selectElem = (tab === 'manual') ? document.getElementById("pilih_lokaliti_manual") : document.getElementById("pilih_lokaliti_manifest");
@@ -265,6 +321,14 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('aktif'));
         document.getElementById('tab_' + namaTab).classList.add('aktif');
         document.getElementById('btn-tab-' + namaTab).classList.add('aktif');
+        
+        // Isu 2: Kawal paparan butang sticky GPS
+        if (namaTab === 'manifest') {
+            // Reset kotak carian dan tapis semula
+            let inputSO = document.getElementById("cari_id_so");
+            if(inputSO) inputSO.value = "";
+            tapisCarianSO();
+        }
     }
 
     // ---- FUNGSI RENDER MANIFEST (Diasingkan untuk Auto-Load) ----
@@ -299,6 +363,8 @@
             </div>`;
         });
         ruangKad.innerHTML = html;
+        // Reset carian bar
+        document.getElementById("cari_id_so").value = "";
     }
 
     // ---- FUNGSI TARIK SENARAI DIKEMAS KINI DENGAN LOCALSTORAGE ----
@@ -331,11 +397,17 @@
         let tarikh = new Date().toLocaleDateString('en-GB');
         let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
         let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
+        
+        // Isu 3: Pastikan ambil catatan dari input kad
         let catatan_kad = document.getElementById("catatan-" + id_bekas).value.toUpperCase();
         
         let labelGanti = "GANTI (R" + next_r + ")"; 
         
+        // REKOD 1: KUTIP
         senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        
+        // REKOD 2: GANTI
+        // Isu 3: Gunakan catatan_kad lama juga pada rekod baharu
         senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: labelGanti, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
@@ -450,9 +522,7 @@
         }
     }
 
-    // =========================================================
-    // FUNGSI AUTO-LOAD (MEMUAT SEMULA) MANIFEST KETIKA REFRESH
-    // =========================================================
+    // ---- FUNGSI AUTO-LOAD (MEMUAT SEMULA) MANIFEST KETIKA REFRESH ----
     window.onload = function() { 
         dapatkanGPS(); 
         janaSenaraiID(); 
@@ -480,6 +550,9 @@
             
             // Lukis semula kad tanpa perlukan internet
             renderManifest(data, savedLokaliti);
+            // Reset input carian dan tapis semua
+            document.getElementById("cari_id_so").value = "";
+            tapisCarianSO();
         }
     };
 
@@ -557,8 +630,10 @@
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "PASANG (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             } 
             else if (tindakan_asal === "Kutip") {
+                // Isu 3: Pastikan ambil catatan dari input borang
                 senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 if (ganti === "YA") {
+                    // Isu 3: Gunakan catatan sama pada rekod GANTI
                     senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
                 }
             }
