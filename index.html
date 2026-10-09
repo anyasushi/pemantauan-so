@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem SO Pintar</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; padding-bottom: 80px; } /* Tambah padding bawah untuk butang sticky */
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; padding-bottom: 80px; }
         .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { font-weight: bold; margin-top: 10px; display: block; }
@@ -14,38 +13,17 @@
         textarea { resize: vertical; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button.sync { background-color: #007bff; }
-        button.kamera { background-color: #17a2b8; margin-top: 0; width: 35%; }
-        button.tutup-kamera { background-color: #dc3545; display: none; }
         
-        /* FIX ISU 2: GAYA BAHARU BUTANG REFRESH STICKY ( terapung ) */
         button.btn-refresh { 
-            background-color: rgb(23, 162, 184, 0.9); /* Lutsinar */
-            color: white; 
-            border: none; 
-            padding: 15px; /* Lebih besar */
-            width: auto; 
-            font-size: 1em; 
-            font-weight: bold; 
-            border-radius: 50px; /* Bulat */
-            cursor: pointer; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            
-            /* KUNCI DI BAWAH KANAN SKRIN */
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            
-            transition: background-color 0.3s;
-            margin-top: 0;
+            background-color: rgb(23, 162, 184, 0.9); color: white; border: none; padding: 15px; width: auto; font-size: 1em; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            position: fixed; bottom: 20px; right: 20px; z-index: 1000; transition: background-color 0.3s; margin-top: 0;
         }
         button.btn-refresh:active { background-color: #117a8b; }
 
         button.btn-reset { background-color: #dc3545; color: white; border: none; padding: 5px 10px; margin-top: 10px; width: 100%; font-size: 0.85em; border-radius: 5px; cursor: pointer; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .status-box { margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; border: 1px solid #ddd; }
         .flex-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-        #reader { width: 100%; margin-top: 10px; display: none; }
         .ruang-ganti { border-left: 4px solid #ffc107; padding-left: 10px; margin-top: 15px; background: #fffdf5; padding-bottom: 10px; }
         input[type="text"], textarea { text-transform: uppercase; }
         .teks-amaran { color: red; font-size: 0.85em; font-weight: bold; display: none; margin-top: 2px; }
@@ -54,14 +32,12 @@
         .ruang-premis { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #17a2b8; }
         .ruang-premis label { font-size: 0.9em; color: #555; margin-top: 5px; }
         
-        /* SISTEM TAB */
         .tab-header { display: flex; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
         .tab-btn { flex: 1; padding: 10px; background: #f8f9fa; border: none; font-weight: bold; cursor: pointer; color: #666; margin-top: 0; border-radius: 5px 5px 0 0; }
         .tab-btn.aktif { background: #007bff; color: white; }
         .tab-content { display: none; }
         .tab-content.aktif { display: block; }
         
-        /* UI KAD MANIFEST */
         .kad-bekas { background: #fffdf5; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
         .kad-bekas h3 { margin: 0 0 5px 0; color: #333; font-size: 1.1em; }
         .kad-bekas p { margin: 0 0 10px 0; font-size: 0.85em; color: #555; font-weight: bold; }
@@ -77,6 +53,7 @@
         .selesai .btn-kumpulan, .selesai .input-catatan-kad { display: none; }
         .btn-tarik { width: 100%; background: #6f42c1; color: white; padding: 12px; border: none; border-radius: 5px; font-weight: bold; margin-bottom: 15px; cursor: pointer; margin-top: 0; }
         .label-kitaran { font-size: 0.8em; color: #007bff; font-weight: bold; background: #e3f2fd; padding: 2px 6px; border-radius: 4px; }
+        .bahagian-induk { background: #fdfbf7; padding: 15px; border-radius: 8px; border: 1px solid #e0dcd3; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -84,7 +61,6 @@
 <div class="container">
     <h2>Pemantauan SO</h2>
 
-    <!-- SISTEM TAB -->
     <div class="tab-header">
         <button class="tab-btn aktif" id="btn-tab-manual" onclick="bukaTab('manual')">Borang Manual</button>
         <button class="tab-btn" id="btn-tab-manifest" onclick="bukaTab('manifest')">Senarai Kutipan</button>
@@ -93,6 +69,48 @@
     <!-- ================== TAB 1: BORANG MANUAL ================== -->
     <div id="tab_manual" class="tab-content aktif">
         
+        <!-- MAKLUMAT INDUK BAHARU -->
+        <div class="bahagian-induk">
+            <label style="margin-top:0;">Negeri:</label>
+            <select id="pilih_negeri" onchange="urusNegeri()" required>
+                <option value="">-- PILIH NEGERI --</option>
+                <option value="JOHOR">JOHOR</option>
+                <option value="KEDAH">KEDAH</option>
+                <option value="KELANTAN">KELANTAN</option>
+                <option value="MELAKA">MELAKA</option>
+                <option value="NEGERI SEMBILAN">NEGERI SEMBILAN</option>
+                <option value="PAHANG">PAHANG</option>
+                <option value="PERAK">PERAK</option>
+                <option value="PERLIS">PERLIS</option>
+                <option value="PULAU PINANG">PULAU PINANG</option>
+                <option value="SABAH">SABAH</option>
+                <option value="SARAWAK">SARAWAK</option>
+                <option value="SELANGOR">SELANGOR</option>
+                <option value="TERENGGANU">TERENGGANU</option>
+                <option value="W.P. KUALA LUMPUR">W.P. KUALA LUMPUR</option>
+                <option value="W.P. LABUAN">W.P. LABUAN</option>
+                <option value="W.P. PUTRAJAYA">W.P. PUTRAJAYA</option>
+                <option value="MKAK">MKAK</option>
+            </select>
+
+            <div id="ruang_daerah">
+                <label>Daerah:</label>
+                <select id="pilih_daerah" required>
+                    <option value="">-- SILA PILIH NEGERI DAHULU --</option>
+                </select>
+            </div>
+
+            <label>Organisasi:</label>
+            <select id="pilih_organisasi" required>
+                <option value="">-- PILIH ORGANISASI --</option>
+                <option value="KKM">KKM</option>
+                <option value="KOMUNITI">KOMUNITI</option>
+            </select>
+
+            <label>Nama Ketua:</label>
+            <input type="text" id="nama_ketua" placeholder="MASUKKAN NAMA KETUA..." required>
+        </div>
+
         <label>Lokaliti:</label>
         <select id="pilih_lokaliti_manual" onchange="kemaskiniLokaliti('manual')" required>
             <option value="">-- PILIH LOKALITI --</option>
@@ -158,23 +176,18 @@
             </label>
         </div>
 
+        <!-- BUTANG QR TELAH DIBUANG SEPENUHNYA -->
         <label id="label_id_utama">ID Bekas:</label>
-        <div class="flex-row">
-            <select id="id_bekas" style="width: 65%;" onchange="semakID(this, 'amaran_id_utama')" required>
-                <option value="">-- PILIH ID --</option>
-            </select>
-            <button type="button" class="kamera" onclick="mulaImbas('id_bekas')">📷 QR</button>
-        </div>
+        <select id="id_bekas" onchange="semakID(this, 'amaran_id_utama')" required>
+            <option value="">-- PILIH ID --</option>
+        </select>
         <span id="amaran_id_utama" class="teks-amaran">⚠️ ID ini telah diisi di lokaliti ini! (Boleh diteruskan jika pembetulan)</span>
 
         <div id="ruang_pukal_akhir" class="hidden">
             <label style="color:#0056b3;">ID Bekas (AKHIR):</label>
-            <div class="flex-row">
-                <select id="id_bekas_akhir" style="width: 65%;">
-                    <option value="">-- PILIH ID --</option>
-                </select>
-                <button type="button" class="kamera" onclick="mulaImbas('id_bekas_akhir')">📷 QR</button>
-            </div>
+            <select id="id_bekas_akhir">
+                <option value="">-- PILIH ID --</option>
+            </select>
         </div>
 
         <span id="label_last_id" class="teks-info">Rekod Terakhir: Tiada</span>
@@ -196,9 +209,6 @@
                 </select>
             </div>
         </div>
-        
-        <div id="reader"></div>
-        <button type="button" id="btnTutupKamera" class="tutup-kamera" onclick="hentiImbas()">Tutup Kamera</button>
 
         <label>Catatan:</label>
         <textarea id="catatan" rows="2" placeholder="CONTOH: TEPI PAGAR..."></textarea>
@@ -211,7 +221,6 @@
     <!-- ================== TAB 2: SENARAI MANIFEST ================== -->
     <div id="tab_manifest" class="tab-content">
         
-        <!-- FIX ISU 1: TAMBAH CARIAN (Sticky Top) -->
         <div style="padding: 10px; background: #e3f2fd; border-bottom: 2px solid #90caf9; position: sticky; top: 0; z-index: 100; margin-bottom:10px;">
             <input type="text" id="cari_id_so" placeholder="🔍 Cari ID SO... (Contoh: 005)" onkeyup="tapisCarianSO()" style="border: 2px solid #007bff; padding: 12px; font-weight:bold; margin-top:0;">
         </div>
@@ -233,13 +242,11 @@
         </div>
     </div> <!-- END TAB 2 -->
 
-
     <!-- STATUS BAWAH -->
     <button class="sync" onclick="syncData()">Sync ke Server ☁️</button>
     <div class="status-box">
         <div class="flex-row" style="margin-bottom: 5px;">
             <div><strong>Status GPS:</strong> <span id="gps_status">Menunggu...</span></div>
-            <!-- REMOVED: Butang refresh lama di sini dibuang -->
         </div>
         <strong>Rekod Belum Sync:</strong> <span id="rekod_count">0</span>
         <button type="button" class="btn-reset" onclick="resetMemori()">🧹 Kosongkan Memori [SELESAI]</button>
@@ -247,39 +254,66 @@
 
 </div>
 
-<!-- FIX ISU 2: BUTANG REFRESH TERAPUNG ( ISSUE 2 FIXED ) -->
+<!-- BUTANG REFRESH TERAPUNG -->
 <button type="button" class="btn-refresh" onclick="dapatkanGPS()">🔄 GPS</button>
 
 <script>
     // MASUKKAN URL APPS SCRIPT ANDA DI SINI
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4x6ZtUiUyfI9yYAEFQwbgmPyFS5HCRFcH8xNMPlmF_MmKIo5KytBIZo-atUPIos2U/exec"; 
+    const WEB_APP_URL = "YOUR_APPS_SCRIPT_URL_HERE"; 
 
     let latSemasa = "";
     let lngSemasa = "";
-    let html5QrCode;
-    let sasaranQR = ""; 
     let sejarahID = JSON.parse(localStorage.getItem("sejarahID_V2")) || {}; 
 
-    // ---- FIX ISU 1: FUNGSI TAPISAN CARIAN SO ----
+    // DATA DAERAH RASMI MALAYSIA
+    const senaraiDaerah = {
+        "JOHOR": ["BATU PAHAT", "JOHOR BAHRU", "KLUANG", "KOTA TINGGI", "KULAI", "MERSING", "MUAR", "PONTIAN", "SEGAMAT", "TANGKAK"],
+        "KEDAH": ["BALING", "BANDAR BAHARU", "KOTA SETAR", "KUALA MUDA", "KUBANG PASU", "KULIM", "LANGKAWI", "PADANG TERAP", "PENDANG", "POKOK SENA", "SIK", "YAN"],
+        "KELANTAN": ["BACHOK", "GUA MUSANG", "JELI", "KOTA BHARU", "KUALA KRAI", "MACHANG", "PASIR MAS", "PASIR PUTEH", "TANAH MERAH", "TUMPAT"],
+        "MELAKA": ["ALOR GAJAH", "JASIN", "MELAKA TENGAH"],
+        "NEGERI SEMBILAN": ["JELEBU", "JEMPOL", "KUALA PILAH", "PORT DICKSON", "REMBAU", "SEREMBAN", "TAMPIN"],
+        "PAHANG": ["BERA", "BENTONG", "CAMERON HIGHLANDS", "JERANTUT", "KUANTAN", "LIPIS", "MARAN", "PEKAN", "RAUB", "ROMPIN", "TEMERLOH"],
+        "PERAK": ["BATANG PADANG", "HILIR PERAK", "HULU PERAK", "KAMPAR", "KERIAN", "KINTA", "KUALA KANGSAR", "LARUT MATANG SELAMA", "MANJUNG", "MUALLIM", "PERAK TENGAH", "BAGAN DATUK"],
+        "PERLIS": ["PERLIS"],
+        "PULAU PINANG": ["BARAT DAYA", "SEBERANG PERAI SELATAN", "SEBERANG PERAI TENGAH", "SEBERANG PERAI UTARA", "TIMUR LAUT"],
+        "SABAH": ["BEAUFORT", "BELURAN", "KENINGAU", "KINABATANGAN", "KOTA BELUD", "KOTA KINABALU", "KOTA MARUDU", "KUALA PENYU", "KUDAT", "KUNAK", "LAHAD DATU", "NABAWAN", "PAPAR", "PENAMPANG", "PUTATAN", "PITAS", "RANAU", "SANDAKAN", "SEMPORNA", "SIPITANG", "TAMBUNAN", "TAWAU", "TENOM", "TONGOD", "TUARAN", "KALABAKAN"],
+        "SARAWAK": ["BETONG", "BINTULU", "KAPIT", "KUCHING", "LIMBANG", "MIRI", "MUKAH", "SAMARAHAN", "SARIKEI", "SERIAN", "SIBU", "SRI AMAN"],
+        "SELANGOR": ["GOMBAK", "HULU LANGAT", "HULU SELANGOR", "KLANG", "KUALA LANGAT", "KUALA SELANGOR", "PETALING", "SABAK BERNAM", "SEPANG"],
+        "TERENGGANU": ["BESUT", "DUNGUN", "HULU TERENGGANU", "KEMAMAN", "KUALA NERUS", "KUALA TERENGGANU", "MARANG", "SETIU"],
+        "W.P. KUALA LUMPUR": ["KUALA LUMPUR"],
+        "W.P. LABUAN": ["LABUAN"],
+        "W.P. PUTRAJAYA": ["PUTRAJAYA"]
+    };
+
+    function urusNegeri() {
+        let negeri = document.getElementById("pilih_negeri").value;
+        let selectDaerah = document.getElementById("pilih_daerah");
+        let ruangDaerah = document.getElementById("ruang_daerah");
+
+        if (negeri === "MKAK") {
+            ruangDaerah.classList.add("hidden");
+            selectDaerah.innerHTML = '<option value="TIDAK BERKENAAN">TIDAK BERKENAAN</option>';
+        } else if (negeri && senaraiDaerah[negeri]) {
+            ruangDaerah.classList.remove("hidden");
+            let htmlOptions = '<option value="">-- PILIH DAERAH --</option>';
+            senaraiDaerah[negeri].forEach(d => {
+                htmlOptions += `<option value="${d}">${d}</option>`;
+            });
+            selectDaerah.innerHTML = htmlOptions;
+        } else {
+            ruangDaerah.classList.remove("hidden");
+            selectDaerah.innerHTML = '<option value="">-- SILA PILIH NEGERI DAHULU --</option>';
+        }
+    }
+
     function tapisCarianSO() {
         let input = document.getElementById('cari_id_so').value.toUpperCase();
-        let ruangKad = document.getElementById('ruang_kad_manifest');
-        let kads = ruangKad.getElementsByClassName('kad-bekas');
-
+        let kads = document.getElementById('ruang_kad_manifest').getElementsByClassName('kad-bekas');
         for (let i = 0; i < kads.length; i++) {
-            // Kita cari dalam elemen h3 (yang mengandungi ID SO)
             let title = kads[i].getElementsByTagName('h3')[0];
             if (title) {
-                let txtValue = title.textContent || title.innerText;
-                // txtValue format: "📦 SO-005 (Semasa: R1)"
-                // Kita cuma nak check bahagian "SO-005"
-                let idPart = txtValue.split('(')[0];
-
-                if (idPart.toUpperCase().indexOf(input) > -1) {
-                    kads[i].style.display = "";
-                } else {
-                    kads[i].style.display = "none";
-                }
+                let idPart = (title.textContent || title.innerText).split('(')[0];
+                if (idPart.toUpperCase().indexOf(input) > -1) kads[i].style.display = ""; else kads[i].style.display = "none";
             }
         }
     }
@@ -288,72 +322,46 @@
         let selectElem = (tab === 'manual') ? document.getElementById("pilih_lokaliti_manual") : document.getElementById("pilih_lokaliti_manifest");
         let inputElem = (tab === 'manual') ? document.getElementById("lokaliti") : document.getElementById("lokaliti_manifest");
 
-        if (selectElem.value === "LAIN") {
-            inputElem.classList.remove("hidden");
-            inputElem.value = "";
-            inputElem.focus(); 
-        } else {
-            inputElem.classList.add("hidden");
-            inputElem.value = selectElem.value;
-        }
-
-        if (tab === 'manual') {
-            janaSenaraiID();
-        }
+        if (selectElem.value === "LAIN") { inputElem.classList.remove("hidden"); inputElem.value = ""; inputElem.focus(); } 
+        else { inputElem.classList.add("hidden"); inputElem.value = selectElem.value; }
+        if (tab === 'manual') janaSenaraiID();
     }
 
-    // ---- FUNGSI RESET MEMORI DIKEMAS KINI ----
     function resetMemori() {
-        let sah = confirm("Adakah anda pasti mahu kosongkan memori telefon ini? Ini akan membuang tanda [SELESAI] dan memadam Cache Senarai Manifest (Data belum Sync TIDAK akan dipadam).");
-        if (sah) {
+        if (confirm("Adakah anda pasti mahu kosongkan memori telefon ini?")) {
             localStorage.removeItem("sejarahID_V2"); 
-            localStorage.removeItem("manifestData_V2"); // Padam cache manifest
-            localStorage.removeItem("manifestLokaliti_V2");
+            localStorage.removeItem("manifestData_V3"); 
+            localStorage.removeItem("manifestLokaliti_V3");
+            localStorage.removeItem("manifestInfo_V3"); // Info Induk Lokaliti
             sejarahID = {}; 
             janaSenaraiID();
             document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center;'>Memori dikosongkan. Sila tarik senarai semula.</p>";
-            alert("Memori telefon telah dibersihkan. Anda boleh mula syif baharu!");
+            alert("Memori telefon dibersihkan.");
         }
     }
 
     function bukaTab(namaTab) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('aktif'));
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('aktif'));
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('aktif'));
         document.getElementById('tab_' + namaTab).classList.add('aktif');
         document.getElementById('btn-tab-' + namaTab).classList.add('aktif');
-        
-        // Isu 2: Kawal paparan butang sticky GPS
-        if (namaTab === 'manifest') {
-            // Reset kotak carian dan tapis semula
-            let inputSO = document.getElementById("cari_id_so");
-            if(inputSO) inputSO.value = "";
-            tapisCarianSO();
-        }
+        if (namaTab === 'manifest') { let inputSO = document.getElementById("cari_id_so"); if(inputSO) {inputSO.value = ""; tapisCarianSO();} }
     }
 
-    // ---- FUNGSI RENDER MANIFEST (Diasingkan untuk Auto-Load) ----
     function renderManifest(data, lokaliti) {
         let ruangKad = document.getElementById("ruang_kad_manifest");
-        if(data.length === 0) {
-            ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod bekas aktif untuk lokaliti ini.</p>";
-            return;
-        }
-        let html = "";
-        let sejarahSemasa = sejarahID[lokaliti] || [];
+        if(data.length === 0) { ruangKad.innerHTML = "<p style='text-align:center; color:green;'>✅ Tiada rekod bekas aktif.</p>"; return; }
+        let html = ""; let sejarahSemasa = sejarahID[lokaliti] || [];
         
         data.forEach(item => {
             let isSelesai = sejarahSemasa.includes(item.id_bekas);
             let kelasSelesai = isSelesai ? "selesai" : "";
-            let teksInfo = item.jalan_blok.replace(/'/g, ""); 
-            
-            let r_semasa = item.r_semasa || 1;
-            let next_r = r_semasa < 7 ? r_semasa + 1 : 7; 
+            let r_semasa = item.r_semasa || 1; let next_r = r_semasa < 7 ? r_semasa + 1 : 7; 
             
             html += `
             <div class="kad-bekas ${kelasSelesai}" id="kad-${item.id_bekas}">
                 <h3>📦 ${item.id_bekas} <span class="label-kitaran">(Semasa: R${r_semasa})</span></h3>
-                <p>📍 Lokasi: ${teksInfo}</p>
-                <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot (Jika Ada)...">
+                <p>📍 Lokasi: ${item.jalan_blok.replace(/'/g, "")}</p>
+                <input type="text" id="catatan-${item.id_bekas}" class="input-catatan-kad" placeholder="Catatan / Ubah Spot...">
                 <div class="btn-kumpulan">
                     <button type="button" class="btn-status btn-baik" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'BAIK', ${next_r})">BAIK</button>
                     <button type="button" class="btn-status btn-musnah" onclick="prosesKad('${item.id_bekas}', '${item.jalan_blok}', 'MUSNAH', ${next_r})">MUSNAH</button>
@@ -363,218 +371,124 @@
             </div>`;
         });
         ruangKad.innerHTML = html;
-        // Reset carian bar
         document.getElementById("cari_id_so").value = "";
     }
 
-    // ---- FUNGSI TARIK SENARAI DIKEMAS KINI DENGAN LOCALSTORAGE ----
     function tarikSenarai() {
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
-        if(!lokaliti) { alert("Sila Pilih / Masukkan Lokaliti dahulu."); return; }
+        if(!lokaliti) { alert("Sila Pilih Lokaliti dahulu."); return; }
         
-        let ruangKad = document.getElementById("ruang_kad_manifest");
-        ruangKad.innerHTML = "<p style='text-align:center;'>Sedang memuat turun dan mengira tahap kitaran (R)...</p>";
+        document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center;'>Memuat turun data & maklumat induk...</p>";
         
         fetch(WEB_APP_URL + "?lokaliti=" + encodeURIComponent(lokaliti))
         .then(res => res.json())
         .then(data => {
-            // SIMPAN DATA KE CACHE TELEFON (KALIS REFRESH)
-            localStorage.setItem("manifestData_V2", JSON.stringify(data));
-            localStorage.setItem("manifestLokaliti_V2", lokaliti);
-            
-            // Panggil fungsi lukis kad
-            renderManifest(data, lokaliti);
+            localStorage.setItem("manifestData_V3", JSON.stringify(data.senarai)); // Array Kotak
+            localStorage.setItem("manifestInfo_V3", JSON.stringify(data.info));       // Maklumat Induk
+            localStorage.setItem("manifestLokaliti_V3", lokaliti);
+            renderManifest(data.senarai, lokaliti);
         })
-        .catch(err => {
-            ruangKad.innerHTML = "<p style='text-align:center; color:red;'>❌ Ralat memuat turun. Sila pastikan internet stabil.</p>";
-        });
+        .catch(err => { document.getElementById("ruang_kad_manifest").innerHTML = "<p style='text-align:center; color:red;'>❌ Ralat memuat turun.</p>"; });
     }
 
     function prosesKad(id_bekas, jalan_blok_asal, status, next_r) {
-        if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
-        
+        if (!latSemasa || !lngSemasa) { alert("GPS belum sedia."); return; }
         let lokaliti = document.getElementById("lokaliti_manifest").value.toUpperCase();
-        let tarikh = new Date().toLocaleDateString('en-GB');
-        let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
-        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        
-        // Isu 3: Pastikan ambil catatan dari input kad
+        let tarikh = new Date().toLocaleDateString('en-GB'); let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
         let catatan_kad = document.getElementById("catatan-" + id_bekas).value.toUpperCase();
         
-        let labelGanti = "GANTI (R" + next_r + ")"; 
+        // PENTING: Ambil info induk lokaliti yang disimpan semasa "Tarik Senarai"
+        let savedInfo = JSON.parse(localStorage.getItem("manifestInfo_V3")) || {negeri: "TIADA INFO", daerah: "TIADA INFO", organisasi: "TIADA INFO", nama_ketua: "TIADA INFO"};
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
         
         // REKOD 1: KUTIP
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
-        
+        senaraiRekod.push({ negeri: savedInfo.negeri, daerah: savedInfo.daerah, lokaliti, organisasi: savedInfo.organisasi, nama_ketua: savedInfo.nama_ketua, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         // REKOD 2: GANTI
-        // Isu 3: Gunakan catatan_kad lama juga pada rekod baharu
-        senaraiRekod.push({ lokaliti, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: labelGanti, status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
+        senaraiRekod.push({ negeri: savedInfo.negeri, daerah: savedInfo.daerah, lokaliti, organisasi: savedInfo.organisasi, nama_ketua: savedInfo.nama_ketua, jalan_blok: jalan_blok_asal, tarikh, masa, id_bekas, tindakan: "GANTI (R" + next_r + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN: catatan_kad });
         
-        if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
-        if (!sejarahID[lokaliti].includes(id_bekas)) sejarahID[lokaliti].push(id_bekas);
-        localStorage.setItem("sejarahID_V2", JSON.stringify(sejarahID));
-        localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
+        if (!sejarahID[lokaliti]) sejarahID[lokaliti] = []; if (!sejarahID[lokaliti].includes(id_bekas)) sejarahID[lokaliti].push(id_bekas);
+        localStorage.setItem("sejarahID_V2", JSON.stringify(sejarahID)); localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
         kiraRekod();
         
-        let kad = document.getElementById("kad-" + id_bekas);
-        kad.classList.add("selesai");
-        kad.querySelector(".selesai-teks").innerText = `✅ Disimpan: Status ${status} -> ${labelGanti}`;
-        
-        if(status === "MUSNAH" || status === "HILANG") {
-            alert("⚠️ Status " + status + " direkodkan. Sila letak bekas gantian di spot baharu yang selamat.");
-            dapatkanGPS(); 
-        }
+        let kad = document.getElementById("kad-" + id_bekas); kad.classList.add("selesai");
+        kad.querySelector(".selesai-teks").innerText = `✅ Disimpan: Status ${status} -> GANTI (R${next_r})`;
+        if(status === "MUSNAH" || status === "HILANG") alert("⚠️ " + status + ". Sila letak bekas di spot baharu yang selamat.");
     }
 
     function urusJenisPremis() {
         let jenis = document.getElementById("jenis_premis").value;
-        let divStrata = document.getElementById("ruang_strata");
-        let divLanded = document.getElementById("ruang_landed");
-        if (jenis === "STRATA") { divStrata.classList.remove("hidden"); divLanded.classList.add("hidden"); } 
-        else if (jenis === "LANDED") { divLanded.classList.remove("hidden"); divStrata.classList.add("hidden"); } 
-        else { divStrata.classList.add("hidden"); divLanded.classList.add("hidden"); }
-    }
-
-    function dapatkanSejarahLokaliti() {
-        let lokaliti = document.getElementById("lokaliti").value.toUpperCase();
-        if (!lokaliti) return []; return sejarahID[lokaliti] || [];
+        document.getElementById("ruang_strata").classList.toggle("hidden", jenis !== "STRATA");
+        document.getElementById("ruang_landed").classList.toggle("hidden", jenis !== "LANDED");
     }
 
     function urusJumlahBekas() {
         var val = document.getElementById("jumlah_bekas").value;
-        var customInput = document.getElementById("jumlah_custom");
-        if (val === "CUSTOM") { customInput.classList.remove("hidden"); } else { customInput.classList.add("hidden"); customInput.value = ""; }
+        document.getElementById("jumlah_custom").classList.toggle("hidden", val !== "CUSTOM");
+        if(val !== "CUSTOM") document.getElementById("jumlah_custom").value = "";
         janaSenaraiID();
     }
 
     function janaSenaraiID() {
         var val = document.getElementById("jumlah_bekas").value;
         var limit = (val === "CUSTOM") ? (parseInt(document.getElementById("jumlah_custom").value) || 0) : (parseInt(val) || 0);
-        let selectID = document.getElementById("id_bekas"); 
-        let selectAkhir = document.getElementById("id_bekas_akhir");
-        
+        let selectID = document.getElementById("id_bekas"); let selectAkhir = document.getElementById("id_bekas_akhir");
         let htmlOptions = '<option value="">-- PILIH ID --</option>'; 
-        let sejarahSemasa = dapatkanSejarahLokaliti(); 
-        let nextAvailableID = ""; 
+        let lokaliti = document.getElementById("lokaliti").value.toUpperCase();
+        let sejarahSemasa = sejarahID[lokaliti] || []; let nextAvailableID = ""; 
 
         for (var i = 1; i <= limit; i++) {
             var namaID = "SO-" + i.toString().padStart(3, '0');
-            if (sejarahSemasa.includes(namaID)) { 
-                htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; 
-            } else { 
-                htmlOptions += `<option value="${namaID}">${namaID}</option>`; 
-                if (nextAvailableID === "") {
-                    nextAvailableID = namaID; 
-                }
-            }
+            if (sejarahSemasa.includes(namaID)) htmlOptions += `<option value="${namaID}">${namaID} [SELESAI]</option>`; 
+            else { htmlOptions += `<option value="${namaID}">${namaID}</option>`; if (nextAvailableID === "") nextAvailableID = namaID; }
         }
-        
-        selectID.innerHTML = htmlOptions; 
-        selectAkhir.innerHTML = htmlOptions;
-        
-        if (nextAvailableID !== "") {
-            selectID.value = nextAvailableID;
-            selectAkhir.value = nextAvailableID;
-        } else {
-            selectID.value = "";
-            selectAkhir.value = "";
-        }
+        selectID.innerHTML = htmlOptions; selectAkhir.innerHTML = htmlOptions;
+        if (nextAvailableID !== "") { selectID.value = nextAvailableID; selectAkhir.value = nextAvailableID; }
     }
 
     function urusPukal() {
         let isPukal = document.getElementById("mod_pukal").checked;
-        if (isPukal) { document.getElementById("label_id_utama").innerText = "ID Bekas (MULA):"; document.getElementById("ruang_pukal_akhir").classList.remove("hidden"); } 
-        else { document.getElementById("label_id_utama").innerText = "ID Bekas:"; document.getElementById("ruang_pukal_akhir").classList.add("hidden"); }
+        document.getElementById("label_id_utama").innerText = isPukal ? "ID Bekas (MULA):" : "ID Bekas:";
+        document.getElementById("ruang_pukal_akhir").classList.toggle("hidden", !isPukal);
     }
 
     function semakID(elemenInput, idAmaran) {
-        var amaran = document.getElementById(idAmaran); let sejarahSemasa = dapatkanSejarahLokaliti();
-        if (sejarahSemasa.includes(elemenInput.value.toUpperCase())) amaran.style.display = "block"; else amaran.style.display = "none";
+        let lokaliti = document.getElementById("lokaliti").value.toUpperCase(); let sejarahSemasa = sejarahID[lokaliti] || [];
+        document.getElementById(idAmaran).style.display = sejarahSemasa.includes(elemenInput.value.toUpperCase()) ? "block" : "none";
     }
 
     function urusTindakan() {
         var tindakan = document.getElementById("tindakan").value;
-        var ruangKutip = document.getElementById("ruangKutip");
-        if (tindakan === "Kutip") { ruangKutip.classList.remove("hidden"); } 
-        else { ruangKutip.classList.add("hidden"); document.getElementById("status").value = "N/A"; document.getElementById("ganti_bekas").value = "TIDAK"; document.getElementById("divGanti").classList.add("hidden"); }
+        document.getElementById("ruangKutip").classList.toggle("hidden", tindakan !== "Kutip");
+        if(tindakan !== "Kutip") { document.getElementById("status").value = "N/A"; document.getElementById("divGanti").classList.add("hidden"); }
     }
 
     function urusStatus() {
-        if (document.getElementById("status").value !== "N/A") { document.getElementById("divGanti").classList.remove("hidden"); document.getElementById("ganti_bekas").value = "YA"; urusGanti(); }
+        if (document.getElementById("status").value !== "N/A") { document.getElementById("divGanti").classList.remove("hidden"); document.getElementById("ganti_bekas").value = "YA"; }
     }
 
-    function urusGanti() {
-        var ganti = document.getElementById("ganti_bekas").value; var status = document.getElementById("status").value;
-        if (ganti === "YA") { if (status === "MUSNAH" || status === "HILANG") { alert("⚠️ AMARAN: Spot ini tidak selamat. Sila letak bekas baharu di spot lain."); } }
-    }
+    function urusGanti() { }
 
     function dapatkanGPS() {
         if (navigator.geolocation) {
-            document.getElementById("gps_status").innerText = "Mencari koordinat...";
+            document.getElementById("gps_status").innerText = "Mencari...";
             navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    latSemasa = position.coords.latitude; lngSemasa = position.coords.longitude;
-                    document.getElementById("gps_status").innerText = "✅ Berjaya (" + latSemasa.toFixed(5) + ")";
-                },
-                function(error) { document.getElementById("gps_status").innerText = "❌ Sila benarkan GPS telefon"; },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                function(pos) { latSemasa = pos.coords.latitude; lngSemasa = pos.coords.longitude; document.getElementById("gps_status").innerText = "✅ Berjaya"; },
+                function(err) { document.getElementById("gps_status").innerText = "❌ Benarkan GPS"; }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
     }
 
-    // ---- FUNGSI AUTO-LOAD (MEMUAT SEMULA) MANIFEST KETIKA REFRESH ----
     window.onload = function() { 
-        dapatkanGPS(); 
-        janaSenaraiID(); 
-        
-        let savedManifest = localStorage.getItem("manifestData_V2");
-        let savedLokaliti = localStorage.getItem("manifestLokaliti_V2");
-        
-        // Jika terdapat memori cache manifest dari sesi sebelumnya
+        dapatkanGPS(); janaSenaraiID(); 
+        let savedManifest = localStorage.getItem("manifestData_V3"); let savedLokaliti = localStorage.getItem("manifestLokaliti_V3");
         if (savedManifest && savedLokaliti) {
-            let data = JSON.parse(savedManifest);
-            let selectManifest = document.getElementById("pilih_lokaliti_manifest");
-            let inputManifest = document.getElementById("lokaliti_manifest");
-            
-            // Selaraskan Dropdown ke lokasi yang tersimpan
+            let selectManifest = document.getElementById("pilih_lokaliti_manifest"); let inputManifest = document.getElementById("lokaliti_manifest");
             let optionExists = Array.from(selectManifest.options).some(opt => opt.value === savedLokaliti);
-            if (optionExists) {
-                selectManifest.value = savedLokaliti;
-                inputManifest.classList.add("hidden");
-                inputManifest.value = savedLokaliti;
-            } else {
-                selectManifest.value = "LAIN";
-                inputManifest.classList.remove("hidden");
-                inputManifest.value = savedLokaliti;
-            }
-            
-            // Lukis semula kad tanpa perlukan internet
-            renderManifest(data, savedLokaliti);
-            // Reset input carian dan tapis semua
-            document.getElementById("cari_id_so").value = "";
-            tapisCarianSO();
+            if (optionExists) { selectManifest.value = savedLokaliti; inputManifest.classList.add("hidden"); inputManifest.value = savedLokaliti; } 
+            else { selectManifest.value = "LAIN"; inputManifest.classList.remove("hidden"); inputManifest.value = savedLokaliti; }
+            renderManifest(JSON.parse(savedManifest), savedLokaliti);
         }
     };
-
-    function mulaImbas(targetInput) {
-        sasaranQR = targetInput; document.getElementById('reader').style.display = "block"; document.getElementById('btnTutupKamera').style.display = "block";
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText) => {
-                var inputTarget = document.getElementById(sasaranQR);
-                let optionExists = Array.from(inputTarget.options).some(opt => opt.value === decodedText);
-                if (!optionExists) { let newOpt = document.createElement("option"); newOpt.value = decodedText; newOpt.text = decodedText; inputTarget.appendChild(newOpt); }
-                inputTarget.value = decodedText;
-                if(sasaranQR === "id_bekas") semakID(document.getElementById(sasaranQR), "amaran_id_utama");
-                hentiImbas(); if (navigator.vibrate) navigator.vibrate(200);
-            }, (err) => {}
-        ).catch((err) => alert("Ralat kamera: " + err));
-    }
-
-    function hentiImbas() {
-        if (html5QrCode) html5QrCode.stop().then(() => { document.getElementById('reader').style.display = "none"; document.getElementById('btnTutupKamera').style.display = "none"; }).catch(err => console.log(err));
-    }
 
     function ekstrakID(idStr) {
         let match = idStr.match(/^([^0-9]*)([0-9]+)$/); if (!match) return null;
@@ -582,33 +496,32 @@
     }
 
     function simpanData() {
-        if (!latSemasa || !lngSemasa) { alert("Sila tunggu koordinat GPS didapati terlebih dahulu."); return; }
-        let tindakan_asal = document.getElementById("tindakan").value;
-        let kitaran = document.getElementById("kitaran_bekas").value; 
-        let ganti = document.getElementById("ganti_bekas").value;
+        if (!latSemasa || !lngSemasa) { alert("Sila tunggu GPS didapati."); return; }
+        
+        let negeri = document.getElementById("pilih_negeri").value;
+        let daerah = document.getElementById("pilih_daerah").value;
+        let organisasi = document.getElementById("pilih_organisasi").value;
+        let nama_ketua = document.getElementById("nama_ketua").value.toUpperCase();
         let lokaliti_asal = document.getElementById("lokaliti").value;
+        let tindakan_asal = document.getElementById("tindakan").value;
         let id_mula = document.getElementById("id_bekas").value.toUpperCase();
         let isPukal = document.getElementById("mod_pukal").checked;
 
-        if (!lokaliti_asal || !tindakan_asal || !id_mula) { alert("Sila lengkapkan borang utama."); return; }
+        if (!negeri || !daerah || !organisasi || !nama_ketua || !lokaliti_asal || !tindakan_asal || !id_mula) { 
+            alert("Sila lengkapkan borang Maklumat Induk & Utama."); return; 
+        }
 
-        let lokaliti = lokaliti_asal.toUpperCase();
-        let senaraiID = [];
-        
+        let lokaliti = lokaliti_asal.toUpperCase(); let senaraiID = [];
         if (isPukal) {
-            let id_akhir = document.getElementById("id_bekas_akhir").value.toUpperCase();
-            if(!id_akhir) { alert("Sila masukkan ID Akhir untuk Mod Pukal."); return; }
+            let id_akhir = document.getElementById("id_bekas_akhir").value.toUpperCase(); if(!id_akhir) return alert("Sila masukkan ID Akhir.");
             let dataMula = ekstrakID(id_mula); let dataAkhir = ekstrakID(id_akhir);
-            if (!dataMula || !dataAkhir || dataMula.prefix !== dataAkhir.prefix || dataMula.num > dataAkhir.num) { alert("Ralat Format Pukal."); return; }
-            for (let i = dataMula.num; i <= dataAkhir.num; i++) { senaraiID.push(dataMula.prefix + String(i).padStart(dataMula.padLength, '0')); }
+            if (!dataMula || !dataAkhir || dataMula.prefix !== dataAkhir.prefix || dataMula.num > dataAkhir.num) return alert("Ralat Format Pukal.");
+            for (let i = dataMula.num; i <= dataAkhir.num; i++) senaraiID.push(dataMula.prefix + String(i).padStart(dataMula.padLength, '0'));
         } else { senaraiID.push(id_mula); }
 
         if (!sejarahID[lokaliti]) sejarahID[lokaliti] = [];
         let idTindih = senaraiID.filter(id => sejarahID[lokaliti].includes(id));
-        if (idTindih.length > 0) {
-            let teruskan = confirm("⚠️ Terdapat ID yang telah direkodkan di lokaliti ini. Teruskan simpan?");
-            if (!teruskan) return;
-        }
+        if (idTindih.length > 0 && !confirm("⚠️ Terdapat ID yang telah direkodkan. Teruskan?")) return;
 
         let jenis_premis = document.getElementById("jenis_premis").value; let jalan_blok_raw = "";
         if (jenis_premis === "STRATA") {
@@ -616,48 +529,30 @@
             if (b && t) jalan_blok_raw = "BLOK " + b + " TINGKAT " + t; else if (b) jalan_blok_raw = "BLOK " + b; else if (t) jalan_blok_raw = "TINGKAT " + t;
         } else if (jenis_premis === "LANDED") { let j = document.getElementById("landed_jalan").value.toUpperCase(); if (j) jalan_blok_raw = j; }
 
-        let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : "";
-        let status = document.getElementById("status").value.toUpperCase();
-        let CATATAN = document.getElementById("catatan").value.toUpperCase(); 
-        let tarikh = new Date().toLocaleDateString('en-GB');
-        let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
-        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || [];
-        
-        let rekodAkhirID = "";
+        let jalan_blok = jalan_blok_raw ? "'" + jalan_blok_raw : ""; let status = document.getElementById("status").value.toUpperCase();
+        let kitaran = document.getElementById("kitaran_bekas").value; let ganti = document.getElementById("ganti_bekas").value;
+        let CATATAN = document.getElementById("catatan").value.toUpperCase(); let tarikh = new Date().toLocaleDateString('en-GB'); let masa = new Date().toLocaleTimeString('en-US', { hour12: false });
+        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || []; let rekodAkhirID = "";
 
         senaraiID.forEach((id_semasa) => {
             if (tindakan_asal === "Pasang") {
-                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "PASANG (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
-            } 
-            else if (tindakan_asal === "Kutip") {
-                // Isu 3: Pastikan ambil catatan dari input borang
-                senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
-                if (ganti === "YA") {
-                    // Isu 3: Gunakan catatan sama pada rekod GANTI
-                    senaraiRekod.push({ lokaliti, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
-                }
+                senaraiRekod.push({ negeri, daerah, lokaliti, organisasi, nama_ketua, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "PASANG (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
+            } else if (tindakan_asal === "Kutip") {
+                senaraiRekod.push({ negeri, daerah, lokaliti, organisasi, nama_ketua, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "KUTIP", status, latitud: latSemasa, longitud: lngSemasa, CATATAN });
+                if (ganti === "YA") senaraiRekod.push({ negeri, daerah, lokaliti, organisasi, nama_ketua, jalan_blok, tarikh, masa, id_bekas: id_semasa, tindakan: "GANTI (" + kitaran + ")", status: "N/A", latitud: latSemasa, longitud: lngSemasa, CATATAN });
             }
-            if (!sejarahID[lokaliti].includes(id_semasa)) sejarahID[lokaliti].push(id_semasa);
-            rekodAkhirID = id_semasa; 
+            if (!sejarahID[lokaliti].includes(id_semasa)) sejarahID[lokaliti].push(id_semasa); rekodAkhirID = id_semasa; 
         });
 
-        localStorage.setItem("sejarahID_V2", JSON.stringify(sejarahID));
-        localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
+        localStorage.setItem("sejarahID_V2", JSON.stringify(sejarahID)); localStorage.setItem("dataSO", JSON.stringify(senaraiRekod));
         alert("Berjaya disimpan! (" + senaraiID.length + " bekas diproses)");
+        document.getElementById("label_last_id").innerText = "Rekod Terakhir: " + (isPukal ? senaraiID[0] + " - " + rekodAkhirID : rekodAkhirID);
         
-        if(isPukal) { document.getElementById("label_last_id").innerText = "Rekod Terakhir (Pukal): " + senaraiID[0] + " - " + rekodAkhirID; } 
-        else { document.getElementById("label_last_id").innerText = "Rekod Terakhir: " + rekodAkhirID; }
-        
-        document.getElementById("id_bekas").value = ""; document.getElementById("id_bekas_akhir").value = ""; 
-        document.getElementById("catatan").value = ""; document.getElementById("amaran_id_utama").style.display = "none";
-        
-        if(tindakan_asal === "Kutip") { urusTindakan(); } 
-        janaSenaraiID(); kiraRekod();
+        document.getElementById("id_bekas").value = ""; document.getElementById("id_bekas_akhir").value = ""; document.getElementById("catatan").value = ""; document.getElementById("amaran_id_utama").style.display = "none";
+        if(tindakan_asal === "Kutip") urusTindakan(); janaSenaraiID(); kiraRekod();
     }
 
-    function kiraRekod() {
-        let senaraiRekod = JSON.parse(localStorage.getItem("dataSO")) || []; document.getElementById("rekod_count").innerText = senaraiRekod.length;
-    }
+    function kiraRekod() { document.getElementById("rekod_count").innerText = (JSON.parse(localStorage.getItem("dataSO")) || []).length; }
     kiraRekod();
 
     function syncData() {
@@ -668,13 +563,10 @@
         fetch(WEB_APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(senaraiRekod), })
         .then(response => response.json())
         .then(data => {
-            if(data.status === "success") {
-                localStorage.setItem("dataSO", JSON.stringify([])); kiraRekod(); document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Semua data berjaya masuk ke Google Sheets!");
-            } else { throw new Error(data.message); }
+            if(data.status === "success") { localStorage.setItem("dataSO", JSON.stringify([])); kiraRekod(); document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Semua data berjaya masuk ke Google Sheets!"); } 
+            else throw new Error(data.message);
         })
-        .catch(error => {
-            console.error('Error:', error); document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Ralat! Pastikan internet anda stabil.");
-        });
+        .catch(error => { document.querySelector(".sync").innerText = "Sync ke Server ☁️"; alert("Ralat! Pastikan internet anda stabil."); });
     }
 </script>
 
